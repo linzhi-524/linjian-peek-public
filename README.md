@@ -1,4 +1,4 @@
-# 掌心窗公开版 v0.3.4-public-clean
+# 掌心窗公开版 v0.3.4.1-public-display-update
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/linzhi-524/linjian-peek-public)
 
@@ -9,6 +9,17 @@
 这一版把自用版 v0.3.4 的功能和 UI 同步到公开版：总览、看见、守护、设置四页结构一致；天气地区、应用门禁、主动提醒、周期提醒都收进抽屉；同时去掉私人名字、私人设备 ID、私人城市和私用默认配置。默认保留“老公”语感，但称呼可以在手机端设置里改成你们自己的称呼。
 
 > 重要提醒：截图、读屏、控制手机、通知、闹钟、应用门禁、自动打开目标 App 都是敏感能力。只在本人设备、本人服务器、本人明确授权的场景使用。不要把 Token 发给别人，也不要接入不可信 MCP 客户端。
+
+
+## v0.3.4.1 轻量修复
+
+这一版是公开版 hotfix，不合并私用声息功能，重点修复部分 vivo / OriginOS 机型首次打开只显示左上角一小块的问题。
+
+- Android Manifest 增加现代 target / 屏幕兼容声明，避免被系统按旧应用兼容缩放。
+- 启动后多次重新测量根布局，让页面第一次打开就铺满可用区域。
+- 设置页新增「版本与更新」：显示当前版本、检查更新、查看更新日志、下载最新版 APK。
+- 后端新增 `/api/update.json` 和 `/update.json`，用于给 App 返回最新版信息。
+- README 原有 Render 一键部署、本地 / 局域网部署、Hugging Face 部署和 MCP 教程全部保留。
 
 ## 目录说明
 

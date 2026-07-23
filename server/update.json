@@ -1,0 +1,12 @@
+{
+  "latest_version_name": "0.3.4.1",
+  "latest_version_code": 30401,
+  "apk_url": "https://github.com/linzhi-524/linjian-peek-public/releases/download/v0.3.4.1/Zhangxinchuang-public-v0.3.4.1.apk",
+  "sha256": "",
+  "required": false,
+  "changelog": [
+    "修复部分 vivo / OriginOS 机型首次打开只显示左上角的问题",
+    "优化全屏铺满与启动重测量，减少首屏黑边/缩小显示",
+    "新增 设置 - 版本与更新，显示当前版本、检查更新、更新日志和下载入口"
+  ]
+}

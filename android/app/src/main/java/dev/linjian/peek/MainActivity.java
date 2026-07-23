@@ -2,7 +2,9 @@ package dev.linjian.peek;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.Intent;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -11,6 +13,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
@@ -28,20 +31,33 @@ import android.widget.ScrollView;
 import android.widget.Toast;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Calendar;
 
 public class MainActivity extends Activity {
+    private static final String APP_VERSION_NAME = "0.3.4.1";
+    private static final int APP_VERSION_CODE = 30401;
+    private static final String DEFAULT_UPDATE_URL = "https://raw.githubusercontent.com/linzhi-524/linjian-peek-public/main/update.json";
+    private int latestVersionCode = APP_VERSION_CODE;
+    private String latestVersionName = APP_VERSION_NAME;
+    private String latestApkUrl = "";
+    private String latestChangelog = "";
+
     private TextView headerTitle, headerSubtitle, statusText, debugText, lifeStatusText, lifeSummaryText, knownAppsText, homeModeStatusText, gateStatusText;
-    private TextView overviewBatteryText, overviewAppText, overviewScreenText, overviewWeatherText, overviewAdviceText, weatherLocationsText, themeText;
+    private TextView overviewBatteryText, overviewAppText, overviewScreenText, overviewWeatherText, overviewAdviceText, weatherLocationsText, themeText, versionStatusText, updateChangelogText;
     private Button toggleButton, accessibilityButton, usageAccessButton, testButton, openXhsButton, openChatGptButton, homeButton, backButton, recentsButton, alarmTestButton, notifyTestButton, refreshLifeButton;
     private Button addPackageButton, testPackageButton, sequenceTestButton, refreshGateButton, addGateAppButton, addWeatherLocationButton, setCurrentWeatherButton;
     private Button themeCreamButton, themeBlueButton, themePeachButton, themeNightButton, themeMintButton;
-    private Button drawerConnectionButton, drawerPermissionButton, drawerControlTestButton, drawerKnownAppsButton, drawerHomeModeButton, drawerGateAddButton, drawerReminderButton, drawerCycleButton, drawerDebugButton, drawerLifeDetailsButton, drawerAppGateButton, drawerWeatherButton;
+    private Button drawerConnectionButton, drawerPermissionButton, drawerControlTestButton, drawerKnownAppsButton, drawerHomeModeButton, drawerGateAddButton, drawerReminderButton, drawerCycleButton, drawerDebugButton, drawerLifeDetailsButton, drawerAppGateButton, drawerWeatherButton, drawerVersionButton, checkUpdateButton, downloadUpdateButton;
     private CheckBox remindersEnabled, batteryRuleEnabled, screenRuleEnabled, waterRuleEnabled, restRuleEnabled, cycleEnabled, foregroundPopupEnabled, homeModeEnabled, homeModeForceEnabled, appGateEnabled;
     private Button tabSettings, tabSee, tabControl, tabLife, tabGate, tabDebug;
     private View sectionSettings, sectionSee, sectionControl, sectionLife, sectionGate, sectionDebug;
-    private View drawerConnection, drawerPermission, drawerControlTest, drawerKnownApps, drawerHomeMode, drawerGateAdd, drawerReminder, drawerCycle, drawerDebug, drawerAppGate, drawerWeather;
+    private View drawerConnection, drawerPermission, drawerControlTest, drawerKnownApps, drawerHomeMode, drawerGateAdd, drawerReminder, drawerCycle, drawerDebug, drawerAppGate, drawerWeather, drawerVersion;
     private EditText serverUrl, tokenInput, deviceInput, userNameInput, partnerNameInput, intervalInput, cityInput, weatherInput;
     private EditText weatherAliasInput, weatherCityInput, weatherNoteInput;
     private EditText batteryThresholdInput, screenThresholdInput, waterIntervalInput, restIntervalInput;
@@ -59,11 +75,13 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        prepareWindowForFullContent();
         setContentView(R.layout.activity_main);
         bindViews();
+        repairFirstLayoutPass();
         loadSettings();
 
-        DebugState.append(this, "掌心窗 v0.3.4-public 抽屉守护版已打开");
+        DebugState.append(this, "掌心窗 v0.3.4.1-public 显示适配版已打开");
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 13);
         serviceRunning = CompanionService.isRunning();
         updateUI();
@@ -87,6 +105,8 @@ public class MainActivity extends Activity {
         if (addGateAppButton != null) addGateAppButton.setOnClickListener(v -> addGateApp());
         if (addWeatherLocationButton != null) addWeatherLocationButton.setOnClickListener(v -> addWeatherLocation(false));
         if (setCurrentWeatherButton != null) setCurrentWeatherButton.setOnClickListener(v -> addWeatherLocation(true));
+        if (checkUpdateButton != null) checkUpdateButton.setOnClickListener(v -> checkForUpdates(true));
+        if (downloadUpdateButton != null) downloadUpdateButton.setOnClickListener(v -> downloadLatestApk());
 
         bindThemeButton(themeCreamButton, "奶油绿"); bindThemeButton(themeBlueButton, "雾蓝白"); bindThemeButton(themePeachButton, "白桃粉"); bindThemeButton(themeNightButton, "夜航黑"); bindThemeButton(themeMintButton, "薄荷透明");
 
@@ -102,6 +122,7 @@ public class MainActivity extends Activity {
         bindDrawer(drawerReminderButton, drawerReminder, "主动提醒规则");
         bindDrawer(drawerCycleButton, drawerCycle, "生理期提醒");
         bindDrawer(drawerDebugButton, drawerDebug, "高级调试日志");
+        bindVersionDrawer();
 
         if (tabSettings != null) tabSettings.setOnClickListener(v -> showTab("settings"));
         if (tabSee != null) tabSee.setOnClickListener(v -> showTab("see"));
@@ -110,19 +131,20 @@ public class MainActivity extends Activity {
         if (tabGate != null) tabGate.setOnClickListener(v -> showTab("gate"));
         if (tabDebug != null) tabDebug.setOnClickListener(v -> showTab("settings"));
         showTab("life");
+        uiHandler.postDelayed(() -> checkForUpdates(false), 1200);
     }
 
     private void bindViews() {
         headerTitle = findViewById(R.id.headerTitle); headerSubtitle = findViewById(R.id.headerSubtitle); statusText = findViewById(R.id.statusText); debugText = findViewById(R.id.debugText); lifeStatusText = findViewById(R.id.lifeStatusText); lifeSummaryText = findViewById(R.id.lifeSummaryText); knownAppsText = findViewById(R.id.knownAppsText); homeModeStatusText = findViewById(R.id.homeModeStatusText); gateStatusText = findViewById(R.id.gateStatusText);
-        overviewBatteryText = findViewById(R.id.overviewBatteryText); overviewAppText = findViewById(R.id.overviewAppText); overviewScreenText = findViewById(R.id.overviewScreenText); overviewWeatherText = findViewById(R.id.overviewWeatherText); overviewAdviceText = findViewById(R.id.overviewAdviceText); weatherLocationsText = findViewById(R.id.weatherLocationsText); themeText = findViewById(R.id.themeText);
+        overviewBatteryText = findViewById(R.id.overviewBatteryText); overviewAppText = findViewById(R.id.overviewAppText); overviewScreenText = findViewById(R.id.overviewScreenText); overviewWeatherText = findViewById(R.id.overviewWeatherText); overviewAdviceText = findViewById(R.id.overviewAdviceText); weatherLocationsText = findViewById(R.id.weatherLocationsText); themeText = findViewById(R.id.themeText); versionStatusText = findViewById(R.id.versionStatusText); updateChangelogText = findViewById(R.id.updateChangelogText);
         toggleButton = findViewById(R.id.toggleButton); accessibilityButton = findViewById(R.id.accessibilityButton); usageAccessButton = findViewById(R.id.usageAccessButton); testButton = findViewById(R.id.testButton); openXhsButton = findViewById(R.id.openXhsButton); openChatGptButton = findViewById(R.id.openChatGptButton); homeButton = findViewById(R.id.homeButton); backButton = findViewById(R.id.backButton); recentsButton = findViewById(R.id.recentsButton); alarmTestButton = findViewById(R.id.alarmTestButton); notifyTestButton = findViewById(R.id.notifyTestButton); refreshLifeButton = findViewById(R.id.refreshLifeButton);
         addPackageButton = findViewById(R.id.addPackageButton); testPackageButton = findViewById(R.id.testPackageButton); sequenceTestButton = findViewById(R.id.sequenceTestButton); refreshGateButton = findViewById(R.id.refreshGateButton); addGateAppButton = findViewById(R.id.addGateAppButton); addWeatherLocationButton = findViewById(R.id.addWeatherLocationButton); setCurrentWeatherButton = findViewById(R.id.setCurrentWeatherButton);
         themeCreamButton = findViewById(R.id.themeCreamButton); themeBlueButton = findViewById(R.id.themeBlueButton); themePeachButton = findViewById(R.id.themePeachButton); themeNightButton = findViewById(R.id.themeNightButton); themeMintButton = findViewById(R.id.themeMintButton);
-        drawerConnectionButton = findViewById(R.id.drawerConnectionButton); drawerPermissionButton = findViewById(R.id.drawerPermissionButton); drawerControlTestButton = findViewById(R.id.drawerControlTestButton); drawerKnownAppsButton = findViewById(R.id.drawerKnownAppsButton); drawerHomeModeButton = findViewById(R.id.drawerHomeModeButton); drawerGateAddButton = findViewById(R.id.drawerGateAddButton); drawerReminderButton = findViewById(R.id.drawerReminderButton); drawerCycleButton = findViewById(R.id.drawerCycleButton); drawerDebugButton = findViewById(R.id.drawerDebugButton); drawerLifeDetailsButton = findViewById(R.id.drawerLifeDetailsButton); drawerAppGateButton = findViewById(R.id.drawerAppGateButton); drawerWeatherButton = findViewById(R.id.drawerWeatherButton);
+        drawerConnectionButton = findViewById(R.id.drawerConnectionButton); drawerPermissionButton = findViewById(R.id.drawerPermissionButton); drawerControlTestButton = findViewById(R.id.drawerControlTestButton); drawerKnownAppsButton = findViewById(R.id.drawerKnownAppsButton); drawerHomeModeButton = findViewById(R.id.drawerHomeModeButton); drawerGateAddButton = findViewById(R.id.drawerGateAddButton); drawerReminderButton = findViewById(R.id.drawerReminderButton); drawerCycleButton = findViewById(R.id.drawerCycleButton); drawerDebugButton = findViewById(R.id.drawerDebugButton); drawerLifeDetailsButton = findViewById(R.id.drawerLifeDetailsButton); drawerAppGateButton = findViewById(R.id.drawerAppGateButton); drawerWeatherButton = findViewById(R.id.drawerWeatherButton); drawerVersionButton = findViewById(R.id.drawerVersionButton); checkUpdateButton = findViewById(R.id.checkUpdateButton); downloadUpdateButton = findViewById(R.id.downloadUpdateButton);
         remindersEnabled = findViewById(R.id.remindersEnabled); batteryRuleEnabled = findViewById(R.id.batteryRuleEnabled); screenRuleEnabled = findViewById(R.id.screenRuleEnabled); waterRuleEnabled = findViewById(R.id.waterRuleEnabled); restRuleEnabled = findViewById(R.id.restRuleEnabled); cycleEnabled = findViewById(R.id.cycleEnabled); foregroundPopupEnabled = findViewById(R.id.foregroundPopupEnabled); homeModeEnabled = findViewById(R.id.homeModeEnabled); homeModeForceEnabled = findViewById(R.id.homeModeForceEnabled); appGateEnabled = findViewById(R.id.appGateEnabled);
         tabSettings = findViewById(R.id.tabSettings); tabSee = findViewById(R.id.tabSee); tabControl = findViewById(R.id.tabControl); tabLife = findViewById(R.id.tabLife); tabGate = findViewById(R.id.tabGate); tabDebug = findViewById(R.id.tabDebug);
         sectionSettings = findViewById(R.id.sectionSettings); sectionSee = findViewById(R.id.sectionSee); sectionControl = findViewById(R.id.sectionControl); sectionLife = findViewById(R.id.sectionLife); sectionGate = findViewById(R.id.sectionGate); sectionDebug = findViewById(R.id.sectionDebug);
-        drawerConnection = findViewById(R.id.drawerConnection); drawerPermission = findViewById(R.id.drawerPermission); drawerControlTest = findViewById(R.id.drawerControlTest); drawerKnownApps = findViewById(R.id.drawerKnownApps); drawerHomeMode = findViewById(R.id.drawerHomeMode); drawerGateAdd = findViewById(R.id.drawerGateAdd); drawerReminder = findViewById(R.id.drawerReminder); drawerCycle = findViewById(R.id.drawerCycle); drawerDebug = findViewById(R.id.drawerDebug); drawerAppGate = findViewById(R.id.drawerAppGate); drawerWeather = findViewById(R.id.drawerWeather);
+        drawerConnection = findViewById(R.id.drawerConnection); drawerPermission = findViewById(R.id.drawerPermission); drawerControlTest = findViewById(R.id.drawerControlTest); drawerKnownApps = findViewById(R.id.drawerKnownApps); drawerHomeMode = findViewById(R.id.drawerHomeMode); drawerGateAdd = findViewById(R.id.drawerGateAdd); drawerReminder = findViewById(R.id.drawerReminder); drawerCycle = findViewById(R.id.drawerCycle); drawerDebug = findViewById(R.id.drawerDebug); drawerAppGate = findViewById(R.id.drawerAppGate); drawerWeather = findViewById(R.id.drawerWeather); drawerVersion = findViewById(R.id.drawerVersion);
         serverUrl = findViewById(R.id.serverUrl); tokenInput = findViewById(R.id.tokenInput); deviceInput = findViewById(R.id.deviceInput); userNameInput = findViewById(R.id.userNameInput); partnerNameInput = findViewById(R.id.partnerNameInput); intervalInput = findViewById(R.id.intervalInput); cityInput = findViewById(R.id.cityInput); weatherInput = findViewById(R.id.weatherInput);
         weatherAliasInput = findViewById(R.id.weatherAliasInput); weatherCityInput = findViewById(R.id.weatherCityInput); weatherNoteInput = findViewById(R.id.weatherNoteInput);
         batteryThresholdInput = findViewById(R.id.batteryThresholdInput); screenThresholdInput = findViewById(R.id.screenThresholdInput); waterIntervalInput = findViewById(R.id.waterIntervalInput); restIntervalInput = findViewById(R.id.restIntervalInput);
@@ -212,7 +234,7 @@ public class MainActivity extends Activity {
     }
     private void updateHeader(String tab) {
         if (headerTitle == null || headerSubtitle == null) return;
-        if ("life".equals(tab)) { headerTitle.setText("掌心窗"); headerSubtitle.setText("v0.3.4 · 生活总览和真实天气。"); }
+        if ("life".equals(tab)) { headerTitle.setText("掌心窗"); headerSubtitle.setText("v0.3.4.1 · 显示适配与版本更新。"); }
         else if ("see".equals(tab)) { headerTitle.setText("看见"); headerSubtitle.setText("把屏幕递给老公，看见就收在这里。"); }
         else if ("gate".equals(tab)) { headerTitle.setText("守护"); headerSubtitle.setText("门禁、天气和提醒，平时收进抽屉。"); }
         else { headerTitle.setText("设置"); headerSubtitle.setText("主题、权限和调试都放这里。"); }
@@ -350,7 +372,7 @@ public class MainActivity extends Activity {
         getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE).edit().putBoolean("user_stopped", false).apply(); requestIgnoreBatteryOptimization();
         Intent intent = new Intent(this, CompanionService.class); intent.putExtra("server_url", url); intent.putExtra("token", token);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent); else startService(intent);
-        DebugState.append(this, "已请求启动前台服务：v0.3.4 抽屉守护 / 真实天气缓存已启用"); serviceRunning = true; updateUI();
+        DebugState.append(this, "已请求启动前台服务：v0.3.4.1 显示适配 / 版本更新已启用"); serviceRunning = true; updateUI();
     }
 
     private void stopCompanionService() { getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE).edit().putBoolean("user_stopped", true).apply(); stopService(new Intent(this, CompanionService.class)); DebugState.append(this, "已停止服务"); serviceRunning = false; updateUI(); }
@@ -374,6 +396,159 @@ public class MainActivity extends Activity {
     private void openAccessibilitySettings() { try { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception e) { Toast.makeText(this, "设置 → 无障碍 → 掌心窗", Toast.LENGTH_LONG).show(); } }
     private void openUsageAccessSettings() { try { startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)); } catch (Exception e) { Toast.makeText(this, "设置 → 应用 → 特殊权限 → 使用情况访问", Toast.LENGTH_LONG).show(); } }
     private void requestIgnoreBatteryOptimization() { if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return; try { PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE); if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) { Intent bi = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS); bi.setData(Uri.parse("package:" + getPackageName())); startActivity(bi); } } catch (Exception ignored) { } }
+
+
+    private void prepareWindowForFullContent() {
+        try {
+            if (Build.VERSION.SDK_INT >= 21) {
+                getWindow().setStatusBarColor(0xFFF8FCF9);
+                getWindow().setNavigationBarColor(0xFFFFFFFF);
+            }
+        } catch (Exception ignored) { }
+    }
+
+    private void repairFirstLayoutPass() {
+        final View content = findViewById(android.R.id.content);
+        if (content == null) return;
+        Runnable repair = () -> {
+            try {
+                View root = ((ViewGroup) content).getChildAt(0);
+                int w = getResources().getDisplayMetrics().widthPixels;
+                int h = getResources().getDisplayMetrics().heightPixels;
+                if (root != null) {
+                    root.setMinimumWidth(w);
+                    root.setMinimumHeight(h);
+                    ViewGroup.LayoutParams lp = root.getLayoutParams();
+                    if (lp != null) { lp.width = ViewGroup.LayoutParams.MATCH_PARENT; lp.height = ViewGroup.LayoutParams.MATCH_PARENT; root.setLayoutParams(lp); }
+                    root.requestLayout();
+                    root.invalidate();
+                }
+                content.requestLayout();
+                content.invalidate();
+            } catch (Exception ignored) { }
+        };
+        content.post(repair);
+        uiHandler.postDelayed(repair, 120);
+        uiHandler.postDelayed(repair, 360);
+        uiHandler.postDelayed(repair, 900);
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) repairFirstLayoutPass();
+    }
+
+    private void bindVersionDrawer() {
+        if (drawerVersionButton == null || drawerVersion == null) return;
+        drawerVersionButton.setOnClickListener(v -> {
+            boolean show = drawerVersion.getVisibility() != View.VISIBLE;
+            drawerVersion.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show) {
+                getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE).edit().putInt("seen_update_code", latestVersionCode).apply();
+            }
+            updateVersionPanel();
+            applyVisualTheme();
+        });
+    }
+
+    private void updateVersionPanel() {
+        boolean hasNew = latestVersionCode > APP_VERSION_CODE;
+        int seen = getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE).getInt("seen_update_code", APP_VERSION_CODE);
+        boolean unseen = hasNew && seen < latestVersionCode;
+        if (drawerVersionButton != null && (drawerVersion == null || drawerVersion.getVisibility() != View.VISIBLE)) {
+            drawerVersionButton.setText("版本与更新" + (unseen ? "  ●" : "") + "  ›");
+        } else if (drawerVersionButton != null) {
+            drawerVersionButton.setText("版本与更新  ˄");
+        }
+        if (versionStatusText != null) {
+            if (hasNew) versionStatusText.setText("当前版本 v" + APP_VERSION_NAME + "\n发现新版本 v" + latestVersionName + "，建议更新。");
+            else versionStatusText.setText("当前版本 v" + APP_VERSION_NAME + "\n已是当前检查到的最新版。");
+        }
+        if (updateChangelogText != null) {
+            String text = latestChangelog == null || latestChangelog.trim().isEmpty()
+                ? "点击检查更新，可查看更新日志并下载最新版。"
+                : latestChangelog.trim();
+            updateChangelogText.setText(text);
+        }
+        if (downloadUpdateButton != null) downloadUpdateButton.setEnabled(hasNew && latestApkUrl != null && latestApkUrl.trim().length() > 0);
+    }
+
+    private void checkForUpdates(boolean manual) {
+        String configuredServer = serverUrl == null ? "" : serverUrl.getText().toString().trim();
+        String primary = configuredServer.isEmpty() ? DEFAULT_UPDATE_URL : configuredServer.replaceAll("/+$", "") + "/api/update.json";
+        new Thread(() -> {
+            try {
+                JSONObject info;
+                try { info = fetchUpdateJson(primary); }
+                catch (Exception first) {
+                    if (DEFAULT_UPDATE_URL.equals(primary)) throw first;
+                    info = fetchUpdateJson(DEFAULT_UPDATE_URL);
+                }
+                int code = info.optInt("latest_version_code", APP_VERSION_CODE);
+                String name = info.optString("latest_version_name", APP_VERSION_NAME);
+                String apk = info.optString("apk_url", "");
+                JSONArray arr = info.optJSONArray("changelog");
+                StringBuilder changes = new StringBuilder();
+                if (arr != null) {
+                    for (int i = 0; i < arr.length(); i++) changes.append("• ").append(arr.optString(i)).append("\n");
+                }
+                latestVersionCode = code;
+                latestVersionName = name;
+                latestApkUrl = apk;
+                latestChangelog = changes.toString().trim();
+                runOnUiThread(() -> {
+                    updateVersionPanel();
+                    if (manual) Toast.makeText(this, code > APP_VERSION_CODE ? "发现新版本 v" + name : "已经是最新版", Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    if (manual) Toast.makeText(this, "检查更新失败：" + e.getClass().getSimpleName(), Toast.LENGTH_SHORT).show();
+                    if (updateChangelogText != null && manual) updateChangelogText.setText("检查更新失败，请稍后再试。\n" + e.getClass().getSimpleName());
+                    updateVersionPanel();
+                });
+            }
+        }).start();
+    }
+
+    private JSONObject fetchUpdateJson(String urlText) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(urlText).openConnection();
+        conn.setConnectTimeout(6000);
+        conn.setReadTimeout(8000);
+        conn.setRequestProperty("User-Agent", "LinjianPeek/" + APP_VERSION_NAME);
+        int code = conn.getResponseCode();
+        if (code < 200 || code >= 300) throw new RuntimeException("HTTP " + code);
+        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = br.readLine()) != null) sb.append(line).append('\n');
+        br.close();
+        return new JSONObject(sb.toString());
+    }
+
+    private void downloadLatestApk() {
+        String url = latestApkUrl == null ? "" : latestApkUrl.trim();
+        if (url.isEmpty()) { Toast.makeText(this, "先检查更新", Toast.LENGTH_SHORT).show(); return; }
+        try {
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+            req.setTitle("掌心窗 v" + latestVersionName);
+            req.setDescription("正在下载掌心窗最新版 APK");
+            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "Zhangxinchuang-public-v" + latestVersionName + ".apk");
+            if (dm != null) {
+                dm.enqueue(req);
+                Toast.makeText(this, "已开始下载，完成后点通知安装", Toast.LENGTH_LONG).show();
+                return;
+            }
+        } catch (Exception ignored) { }
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(i);
+            Toast.makeText(this, "已打开下载链接", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "打不开下载链接", Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private void updateUI() {
         boolean accessibilityOk = ScreenshotService.getInstance() != null; boolean usageOk = LifeState.hasUsagePermission(this);
@@ -401,6 +576,7 @@ public class MainActivity extends Activity {
         if (gateStatusText != null) gateStatusText.setText(AppGate.prettyClean(this));
         if (debugText != null) debugText.setText(DebugState.get(this));
         if (themeText != null) themeText.setText("当前主题：" + AppPrefs.get(this).getString(AppPrefs.KEY_THEME, "奶油绿") + "\n点击后即时切换背景、卡片、按钮和底部导航。");
+        updateVersionPanel();
         applyVisualTheme();
     }
 

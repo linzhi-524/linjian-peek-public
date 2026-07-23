@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""掌心窗 v0.3.4 unified server.
+"""掌心窗 v0.3.4.1 unified server.
 
 零依赖标准库版，负责：
 1. 给手机端下发 peek / open_app / back / home / recents / tap / swipe / set_alarm / send_notification 命令；
@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, urlparse
 DEFAULT_PORT = 8513
 DEFAULT_KEEP = 3
 MAX_UPLOAD_BYTES = 24 * 1024 * 1024
-VERSION = "0.3.4-public"
+VERSION = "0.3.4.1-public"
 DEFAULT_DEVICE = os.environ.get("LINJIAN_DEFAULT_DEVICE", "android-phone")
 
 ERR_BAD_TOKEN = "LINJIAN_ERR_BAD_TOKEN"
@@ -56,6 +56,29 @@ def load_dotenv(path: Path) -> None:
         key, _, val = line.partition("=")
         os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
 
+
+
+def load_update_info() -> dict:
+    here = Path(__file__).resolve().parent
+    candidates = [here.parent / "update.json", here / "update.json"]
+    for path in candidates:
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+    return {
+        "latest_version_name": "0.3.4.1",
+        "latest_version_code": 30401,
+        "apk_url": "",
+        "sha256": "",
+        "required": False,
+        "changelog": [
+            "修复部分 vivo / OriginOS 机型首次打开只显示左上角的问题",
+            "优化全屏铺满与启动重测量",
+            "新增 设置 - 版本与更新，支持检查最新版和查看更新日志"
+        ]
+    }
 
 def now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -156,6 +179,11 @@ class Handler(BaseHTTPRequestHandler):
         qs = parse_qs(parsed.query)
         if path in ("/", "/health"):
             self._json(200, {"ok": True, "service": "linjian-unified", "name": "掌心窗", "version": VERSION, "tools": sorted(ALLOWED_ACTIONS)})
+            return
+        if path in ("/api/update.json", "/update.json"):
+            payload = load_update_info()
+            payload.setdefault("ok", True)
+            self._json(200, payload)
             return
         if path == "/api/poll":
             if not self._require_token(): return

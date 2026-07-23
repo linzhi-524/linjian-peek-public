@@ -61,7 +61,7 @@ public class LifeState {
             SharedPreferencesCompat prefs = new SharedPreferencesCompat(ctx);
 
             state.put("device_id", AppPrefs.device(ctx));
-            state.put("life_state_version", "0.3.4");
+            state.put("life_state_version", "0.3.4.1");
             state.put("local_time", formatLocal(now, "HH:mm"));
             state.put("local_date", formatLocal(now, "yyyy-MM-dd"));
             state.put("timezone", TimeZone.getDefault().getID());
@@ -103,7 +103,7 @@ public class LifeState {
         try {
             JSONObject s = collect(ctx);
             StringBuilder sb = new StringBuilder();
-            sb.append("生活状态层 v0.3.4\n");
+            sb.append("生活状态层 v0.3.4.1\n");
             sb.append("时间：").append(s.optString("local_time", "-")).append("  ").append(s.optString("local_date", "-")).append("\n");
             sb.append("电量：").append(s.optInt("battery_percent", -1)).append("%  ").append(s.optBoolean("charging") ? "充电中" : "未充电").append("\n");
             sb.append("网络：").append(s.optString("network_type", "-")).append("  屏幕：").append(s.optBoolean("screen_on") ? "亮" : "灭").append("\n");

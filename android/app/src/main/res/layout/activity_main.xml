@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -28,7 +29,7 @@
             android:id="@+id/headerSubtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="v0.3.4-public · 抽屉守护，页面更干净。"
+            android:text="v0.3.4.1-public · 显示适配与版本更新。"
             android:textSize="11sp"
             android:textColor="#FF7E928C"
             android:layout_marginTop="4dp" />
@@ -331,6 +332,16 @@
                         <Button android:id="@+id/themeNightButton" android:layout_width="0dp" android:layout_height="30dp" android:layout_weight="1" android:text="夜航黑" android:textSize="11sp" android:background="@drawable/pill_soft" />
                         <Button android:id="@+id/themeMintButton" android:layout_width="0dp" android:layout_height="30dp" android:layout_weight="1" android:text="薄荷透明" android:textSize="11sp" android:background="@drawable/pill_soft" android:layout_marginLeft="5dp" />
                     </LinearLayout>
+                </LinearLayout>
+
+
+                <Button android:id="@+id/drawerVersionButton" android:layout_width="match_parent" android:layout_height="30dp" android:text="版本与更新  ›" android:textSize="11sp" android:background="@drawable/pill_soft" android:layout_marginBottom="8dp" />
+                <LinearLayout android:id="@+id/drawerVersion" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/card_bg" android:visibility="gone" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="版本与更新" android:textStyle="bold" android:textSize="15sp" android:textColor="#FF2D3E39" />
+                    <TextView android:id="@+id/versionStatusText" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="当前版本 v0.3.4.1" android:textSize="11sp" android:textColor="#FF596D66" android:layout_marginTop="6dp" android:lineSpacingExtra="3dp" />
+                    <TextView android:id="@+id/updateChangelogText" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="点击检查更新，可查看更新日志并下载最新版。" android:textSize="11sp" android:textColor="#FF7E928C" android:layout_marginTop="6dp" android:lineSpacingExtra="4dp" />
+                    <Button android:id="@+id/checkUpdateButton" android:layout_width="match_parent" android:layout_height="30dp" android:text="检查更新" android:textSize="11sp" android:background="@drawable/pill_soft" android:layout_marginTop="8dp" />
+                    <Button android:id="@+id/downloadUpdateButton" android:layout_width="match_parent" android:layout_height="30dp" android:text="下载最新版" android:textSize="11sp" android:background="@drawable/pill_soft" android:layout_marginTop="6dp" />
                 </LinearLayout>
 
                 <Button android:id="@+id/drawerConnectionButton" android:layout_width="match_parent" android:layout_height="30dp" android:text="连接设置  ›" android:textSize="11sp" android:background="@drawable/pill_soft" android:layout_marginBottom="8dp" />
