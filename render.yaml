@@ -16,6 +16,7 @@ services:
   - type: web
     name: zhangxinchuang-server
     runtime: python
+    plan: free
     rootDir: server
     buildCommand: echo ok
     startCommand: python linjian_server.py
@@ -29,6 +30,7 @@ services:
   - type: web
     name: zhangxinchuang-mcp
     runtime: node
+    plan: free
     rootDir: mcp
     buildCommand: npm install
     startCommand: npm start
