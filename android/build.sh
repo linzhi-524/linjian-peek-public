@@ -65,15 +65,15 @@ $BUILD_TOOLS/apksigner sign \
     --ks-pass pass:"$PUBLIC_KS_PASSWORD" \
     --key-pass pass:"$PUBLIC_KS_PASSWORD" \
     --ks-key-alias zhangxinchuang-public \
-    --out "$PROJECT/Zhangxinchuang-public-v0.3.6.6.apk" \
+    --out "$PROJECT/Zhangxinchuang-public-v0.3.7.apk" \
     app.aligned.apk
 
 echo "=== Verifying fixed public signature ==="
-VERIFY_OUTPUT=$($BUILD_TOOLS/apksigner verify --verbose --print-certs "$PROJECT/Zhangxinchuang-public-v0.3.6.6.apk")
+VERIFY_OUTPUT=$($BUILD_TOOLS/apksigner verify --verbose --print-certs "$PROJECT/Zhangxinchuang-public-v0.3.7.apk")
 echo "$VERIFY_OUTPUT"
 echo "$VERIFY_OUTPUT" | grep -qi "aea75c9b2b5f5c42d56b72d4a69a79a38e1c57f27db021017be8656bc8f002fb"
 
 echo ""
 echo "=== Done ==="
-echo "APK: $PROJECT/Zhangxinchuang-public-v0.3.6.6.apk"
-ls -lh "$PROJECT/Zhangxinchuang-public-v0.3.6.6.apk"
+echo "APK: $PROJECT/Zhangxinchuang-public-v0.3.7.apk"
+ls -lh "$PROJECT/Zhangxinchuang-public-v0.3.7.apk"

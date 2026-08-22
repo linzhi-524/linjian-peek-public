@@ -63,7 +63,7 @@ public class CompanionService extends Service {
             DebugState.append(this, "服务启动失败：服务器地址或 Token 为空");
             stopSelf(); return START_NOT_STICKY;
         }
-        DebugState.append(this, "掌心窗公开版 v0.3.6.6 服务已启动，目标：" + serverUrl);
+        DebugState.append(this, "掌心窗公开版 v0.3.7 服务已启动，目标：" + serverUrl);
         if (!running) { running = true; startPolling(); } else DebugState.append(this, "服务已在运行，继续轮询");
         return START_STICKY;
     }

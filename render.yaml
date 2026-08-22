@@ -1,4 +1,4 @@
-# Render Blueprint for 掌心窗公开版 v0.3.6.6
+# Render Blueprint for 掌心窗公开版 v0.3.7
 # 一键部署会创建两个服务：手机端后端 server + MCP 服务。
 # 部署后：
 # - 手机 App 填 zhangxinchuang-server 的外部地址。

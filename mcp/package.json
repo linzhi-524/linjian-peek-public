@@ -1,6 +1,6 @@
 {
   "name": "linjian-unified-mcp",
-  "version": "0.3.6.6",
+  "version": "0.3.7",
   "private": true,
   "type": "module",
   "description": "Public MCP server for 掌心窗: screenshot, guard tools, configurable app control, active care, and visit timestamps.",

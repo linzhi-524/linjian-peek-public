@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""掌心窗公开版 v0.3.6.6 unified server.
+"""掌心窗公开版 v0.3.7 unified server.
 
 零依赖标准库版，负责：
 1. 给手机端下发 peek / open_app / back / home / recents / tap / swipe / set_alarm / send_notification 命令；
@@ -24,7 +24,7 @@ from urllib.parse import parse_qs, urlparse
 DEFAULT_PORT = 8513
 DEFAULT_KEEP = 3
 MAX_UPLOAD_BYTES = 24 * 1024 * 1024
-VERSION = "0.3.6.6"
+VERSION = "0.3.7"
 DEFAULT_DEVICE = os.environ.get("LINJIAN_DEFAULT_DEVICE", "android-phone")
 ACTIVITY_EVENT_LIMIT = 500
 

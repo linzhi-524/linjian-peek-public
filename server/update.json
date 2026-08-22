@@ -1,15 +1,14 @@
 {
-  "latest_version_name": "0.3.6.6",
-  "latest_version_code": 30606,
-  "apk_url": "https://github.com/linzhi-524/linjian-peek-public/releases/download/v0.3.6.6/zhangxinchuang-public-debug-apk.1.zip",
+  "latest_version_name": "0.3.7",
+  "latest_version_code": 30700,
+  "apk_url": "https://github.com/linzhi-524/linjian-peek-public/releases/download/v0.3.7/Zhangxinchuang-public-v0.3.7.apk",
   "sha256": "",
   "required": false,
   "changelog": [
-    "修复今日屏幕时间跨凌晨不重置：改为按手机本地 0 点到当前时间统计，并用 UsageEvents 裁剪今日区间。",
-    "新增公开版“此刻状态”卡片：显示手机姿态、环境光、当前 App 与授权后的定位。",
-    "设置页新增“此刻状态”折叠抽屉，定位权限与悬浮窗权限均放在设置页由用户主动开启。",
-    "应用门禁新增无障碍触发后的悬浮锁定页；没有悬浮窗权限时自动回退到旧锁定页。",
-    "设置页主题改为折叠抽屉；移除“窗面与陪伴…”与“头像由你…”两张说明卡，陪伴页和守护页保持不改。",
+    "守护日历支持按稳定事件 ID 编辑和删除，同一天的其他事件不会受到影响。",
+    "新增本机保存的“TA 的日记”，包含纸质日记页、左侧日期抽屉、搜索、封面和备份。",
+    "日记正文默认显示四行摘要，点击对应纸页后展开全文，再次点击可收起。",
+    "MCP 新增守护日历管理与日记本读写、搜索、更新和删除工具。",
     "固定签名保持不变，支持覆盖安装旧版本。"
   ]
 }

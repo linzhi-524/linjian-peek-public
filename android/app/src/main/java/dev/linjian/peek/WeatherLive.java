@@ -144,7 +144,7 @@ public class WeatherLive {
         HttpURLConnection conn = (HttpURLConnection) new URL(u).openConnection();
         conn.setConnectTimeout(6000);
         conn.setReadTimeout(8000);
-        conn.setRequestProperty("User-Agent", "LinjianPeekPublic/0.3.6.6");
+        conn.setRequestProperty("User-Agent", "LinjianPeekPublic/0.3.7");
         try {
             InputStream is = conn.getInputStream();
             BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));

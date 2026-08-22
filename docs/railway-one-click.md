@@ -1,4 +1,4 @@
-# Railway 一键部署按钮配置（v0.3.6.6）
+# Railway 一键部署按钮配置（v0.3.7）
 
 Railway 的一键部署按钮基于 Railway Template。源码包本身不能直接生成 Template Code，需要先在你的 Railway 工作区里创建模板；模板创建后，Railway 会给出 Template URL 和按钮代码。
 

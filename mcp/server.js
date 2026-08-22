@@ -802,7 +802,7 @@ async function fetchLatestImage() {
 }
 
 function makeServer() {
-  const server = new McpServer({ name: "掌心窗", version: "0.3.6.6" });
+  const server = new McpServer({ name: "掌心窗", version: "0.3.7" });
   const commandBackedTools = new Set([
     "peek_screen", "get_screen_nodes", "tap_text", "input_text", "draft_xhs_comment", "xhs_comment", "send_visible_comment_after_confirmation",
     "add_guardian_calendar_event", "care_action", "trigger_guidian", "mark_guidian_returned",
@@ -1781,7 +1781,7 @@ app.get("/", (_req, res) => res.type("text/plain").send("掌心窗 unified MCP i
 app.get("/health", (_req, res) => res.json({
   ok: true,
   service: "linjian-public-mcp",
-  version: "0.3.6.6",
+  version: "0.3.7",
   has_url: Boolean(LINJIAN_URL_CANDIDATES.length),
   has_token: Boolean(LINJIAN_TOKEN),
   configured_linjian_url: RAW_LINJIAN_URL || "",
@@ -1790,7 +1790,7 @@ app.get("/health", (_req, res) => res.json({
   guardian_day_tools: true,
   diary_tools: true,
   diary_storage: "phone_local",
-  stability_note: "v0.3.6.6 降低手机端轮询与状态上传压力；遇到 429 会返回限流提示。"
+  stability_note: "v0.3.7 新增守护日历删除能力与本机 TA 的日记工具，保留限流保护。"
 }));
 app.post("/mcp", async (req, res) => {
   try { const server = makeServer(); const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined }); res.on("close", () => transport.close()); await server.connect(transport); await transport.handleRequest(req, res, req.body); }

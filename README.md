@@ -1,4 +1,13 @@
-# 掌心窗公开版 v0.3.6.6
+# 掌心窗公开版 v0.3.7
+
+## v0.3.7 日记与守护日历更新
+
+- 守护日历事件补充稳定 ID，支持在日期详情卡中编辑、确认删除，并兼容没有 ID 的旧数据。
+- MCP 完善 `list_guardian_days`、`add_guardian_day`、`update_guardian_day`、`delete_guardian_day`。
+- 陪伴页新增本机保存的“TA 的日记”：纸质封面与纸页、左侧日期抽屉、关键词/日期搜索、封面修改和导入导出备份。
+- 日记正文默认仅显示四行摘要；点击对应纸页展开全文，再次点击即可收起，切换纸页时会自动折叠上一篇。
+- “更多”菜单支持手动添加日记；MCP 支持创建、读取、搜索、更新和删除日记本及日记。
+- 固定公开版签名保持不变，可继续覆盖安装旧版本。
 
 ## v0.3.6.6 稳定性修复
 
@@ -65,15 +74,15 @@ update.json   版本更新信息
 
 1. 将源码包解压并覆盖到公开仓库根目录，确保 `.github`、`android`、`server`、`mcp` 位于根目录。
 2. 打开 GitHub 仓库 → **Actions** → **Build Android Public APK** → **Run workflow**。
-3. 构建成功后下载 `zhangxinchuang-public-v0.3.6.6-apk` artifact。
+3. 构建成功后下载 `zhangxinchuang-public-v0.3.7-apk` artifact。
 
 构建产物为：
 
 ```text
-android/Zhangxinchuang-public-v0.3.6.6.apk
+android/Zhangxinchuang-public-v0.3.7.apk
 ```
 
-版本名 `0.3.6.6`，版本码 `30606`。
+版本名 `0.3.7`，版本码 `30700`。
 
 ### 固定签名
 

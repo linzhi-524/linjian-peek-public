@@ -111,6 +111,8 @@ public class MainActivity extends Activity {
     private boolean guardianCalendarDetailOpen = false;
     private boolean diaryPageOpen = false, diaryContentOpen = false;
     private String diaryBookId = "", diarySelectedDate = "", diaryCurrentEntryId = "";
+    private View diaryExpandedPaperView;
+    private TextView diaryExpandedContentView, diaryExpandedHintView;
     private FrameLayout diaryDateDrawerOverlay;
     private LinearLayout diaryDateDrawerPanel;
     private GuardianRingView guardianRing;
@@ -129,7 +131,7 @@ public class MainActivity extends Activity {
         loadSettings();
         NowState.start(this);
 
-        DebugState.append(this, "掌心窗公开版 v0.3.6.6 已打开");
+        DebugState.append(this, "掌心窗公开版 v0.3.7 已打开");
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 13);
         serviceRunning = CompanionService.isRunning();
         updateUI();
@@ -676,6 +678,9 @@ public class MainActivity extends Activity {
 
     private View buildDiaryContentPage(JSONArray searchResults) {
         LinearLayout root = pageColumn();
+        diaryExpandedPaperView = null;
+        diaryExpandedContentView = null;
+        diaryExpandedHintView = null;
         JSONObject book = DiaryState.bookById(this, diaryBookId);
         LinearLayout top = horizontal();
         Button back = iconButton("←", "返回日记封面"); back.setOnClickListener(v -> showDiaryHomePage()); top.addView(back, new LinearLayout.LayoutParams(dp(36), dp(32)));
@@ -733,8 +738,6 @@ public class MainActivity extends Activity {
     private void showDiaryDatePage(String date, String preferredEntryId) {
         diarySelectedDate = date == null ? "" : date;
         diaryCurrentEntryId = preferredEntryId == null ? "" : preferredEntryId;
-        JSONArray entries = DiaryState.listEntries(this, diaryBookId);
-        if (diaryCurrentEntryId.isEmpty()) for (int i = 0; i < entries.length(); i++) { JSONObject e = entries.optJSONObject(i); if (e != null && diarySelectedDate.equals(e.optString("date", ""))) { diaryCurrentEntryId = e.optString("id", ""); break; } }
         replaceScrollContent(sectionSee, buildDiaryContentPage(null)); animateDiaryPageSwap();
     }
 
@@ -808,14 +811,40 @@ public class MainActivity extends Activity {
 
     private View buildDiaryEntryPaper(JSONObject entry) {
         LinearLayout paper = new LinearLayout(this); paper.setTag("diary_paper"); paper.setOrientation(LinearLayout.VERTICAL); paper.setPadding(dp(20), dp(18), dp(20), dp(20)); paper.setBackground(new DiaryPaperDrawable()); paper.setElevation(dp(2));
-        boolean current = entry.optString("id", "").equals(diaryCurrentEntryId);
+        String entryId = entry.optString("id", "");
+        boolean current = entryId.equals(diaryCurrentEntryId);
         LinearLayout meta = horizontal(); TextView time = label(entry.optString("time_label", entry.optString("created_at", "").length() >= 16 ? entry.optString("created_at").substring(11, 16) : ""), 8); meta.addView(time, weightedWrap(1f, 0)); TextView mood = label(entry.optString("mood", ""), 8); meta.addView(mood); paper.addView(meta);
         TextView heading = title(entry.optString("title", "没有标题的一页"), 16); heading.setTypeface(Typeface.create("serif", Typeface.BOLD)); heading.setTextColor(Color.parseColor("#5A4942")); paper.addView(heading, matchWrapTop(10));
-        TextView content = body(entry.optString("content", ""), 11); content.setTypeface(Typeface.create("serif", Typeface.NORMAL)); content.setTextColor(Color.parseColor("#66564E")); content.setLineSpacing(dp(8), 1f); paper.addView(content, matchWrapTop(10));
+        TextView content = body(entry.optString("content", ""), 11); content.setTypeface(Typeface.create("serif", Typeface.NORMAL)); content.setTextColor(Color.parseColor("#66564E")); content.setLineSpacing(dp(8), 1f); setDiaryEntryExpanded(content, current); paper.addView(content, matchWrapTop(10));
         String tags = diaryTagsText(entry.optJSONArray("tags")); if (!tags.isEmpty()) { TextView tagView = body(tags, 8); tagView.setTextColor(Color.parseColor("#A1767F")); paper.addView(tagView, matchWrapTop(14)); }
-        if (current) paper.addView(label("当前纸页", 8), matchWrapTop(8));
-        paper.setOnClickListener(v -> { diaryCurrentEntryId = entry.optString("id", ""); Toast.makeText(this, "已选中「" + entry.optString("title", "这篇日记") + "」", Toast.LENGTH_SHORT).show(); }); paper.setClickable(true);
+        TextView expandHint = label(current ? "收起全文  ↑" : "点击展开全文  ↓", 8); expandHint.setTextColor(Color.parseColor("#A1767F")); paper.addView(expandHint, matchWrapTop(11));
+        if (current) { diaryExpandedPaperView = paper; diaryExpandedContentView = content; diaryExpandedHintView = expandHint; }
+        paper.setContentDescription(current ? "点击收起这篇日记" : "点击展开这篇日记");
+        paper.setOnClickListener(v -> toggleDiaryEntryPaper(paper, content, expandHint, entryId)); paper.setClickable(true); paper.setFocusable(true);
         return paper;
+    }
+
+    private void setDiaryEntryExpanded(TextView content, boolean expanded) {
+        content.setMaxLines(expanded ? Integer.MAX_VALUE : 4);
+        content.setEllipsize(expanded ? null : TextUtils.TruncateAt.END);
+    }
+
+    private void toggleDiaryEntryPaper(View paper, TextView content, TextView hint, String entryId) {
+        boolean expanding = !entryId.equals(diaryCurrentEntryId);
+        if (expanding && diaryExpandedContentView != null && diaryExpandedContentView != content) {
+            setDiaryEntryExpanded(diaryExpandedContentView, false);
+            if (diaryExpandedHintView != null) diaryExpandedHintView.setText("点击展开全文  ↓");
+            if (diaryExpandedPaperView != null) diaryExpandedPaperView.setContentDescription("点击展开这篇日记");
+        }
+        diaryCurrentEntryId = expanding ? entryId : "";
+        setDiaryEntryExpanded(content, expanding);
+        hint.setText(expanding ? "收起全文  ↑" : "点击展开全文  ↓");
+        paper.setContentDescription(expanding ? "点击收起这篇日记" : "点击展开这篇日记");
+        diaryExpandedPaperView = expanding ? paper : null;
+        diaryExpandedContentView = expanding ? content : null;
+        diaryExpandedHintView = expanding ? hint : null;
+        content.setAlpha(.35f); content.animate().alpha(1f).setDuration(180).start();
+        paper.requestLayout();
     }
 
     private View buildDiarySearchResultCard(JSONObject entry) {
@@ -2127,7 +2156,7 @@ public class MainActivity extends Activity {
         getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE).edit().putBoolean("user_stopped", false).apply(); requestIgnoreBatteryOptimization();
         Intent intent = new Intent(this, CompanionService.class); intent.putExtra("server_url", url); intent.putExtra("token", token);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent); else startService(intent);
-        DebugState.append(this, "已请求启动前台服务：公开版 v0.3.6.6 右侧 love 线稿花枝已启用"); serviceRunning = true; updateUI();
+        DebugState.append(this, "已请求启动前台服务：公开版 v0.3.7 右侧 love 线稿花枝已启用"); serviceRunning = true; updateUI();
     }
 
     private void stopCompanionService() { getSharedPreferences(AppPrefs.PREFS, MODE_PRIVATE).edit().putBoolean("user_stopped", true).apply(); stopService(new Intent(this, CompanionService.class)); DebugState.append(this, "已停止服务"); serviceRunning = false; updateUI(); }
