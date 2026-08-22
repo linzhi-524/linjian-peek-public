@@ -111,7 +111,8 @@ public class MainActivity extends Activity {
     private boolean guardianCalendarDetailOpen = false;
     private boolean diaryPageOpen = false, diaryContentOpen = false;
     private String diaryBookId = "", diarySelectedDate = "", diaryCurrentEntryId = "";
-    private LinearLayout diaryTimelinePanel;
+    private FrameLayout diaryDateDrawerOverlay;
+    private LinearLayout diaryDateDrawerPanel;
     private GuardianRingView guardianRing;
     private long lastCompanionSyncAt = 0L;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -566,6 +567,7 @@ public class MainActivity extends Activity {
     }
 
     private void showCompanionHomePage() {
+        removeDiaryDateDrawerImmediately();
         diaryPageOpen = false;
         diaryContentOpen = false;
         diarySelectedDate = "";
@@ -576,6 +578,7 @@ public class MainActivity extends Activity {
     }
 
     private void showDiaryHomePage() {
+        removeDiaryDateDrawerImmediately();
         diaryPageOpen = true;
         diaryContentOpen = false;
         replaceScrollContent(sectionSee, buildDiaryHomePage());
@@ -588,7 +591,7 @@ public class MainActivity extends Activity {
         Button back = iconButton("←", "返回陪伴页");
         back.setOnClickListener(v -> showCompanionHomePage());
         top.addView(back, new LinearLayout.LayoutParams(dp(36), dp(32)));
-        top.addView(title("TA 的日记", 15), weightedWrap(1f, 10));
+        top.addView(title("日记本封面", 15), weightedWrap(1f, 10));
         root.addView(top, marginBottom(12));
 
         JSONArray books = DiaryState.books(this);
@@ -636,10 +639,6 @@ public class MainActivity extends Activity {
             root.addView(coverActions, marginBottom(14));
         }
 
-        LinearLayout privacy = editorialCard();
-        privacy.addView(label("仅保存在本机", 9));
-        privacy.addView(body("TA 的日记不会默认上传云端。卸载 App 可能导致丢失，可在设置页的“日记本备份”中导入或导出。", 9), matchWrapTop(6));
-        root.addView(privacy);
         return root;
     }
 
@@ -686,19 +685,19 @@ public class MainActivity extends Activity {
         root.addView(top, marginBottom(8));
 
         LinearLayout timelineBar = horizontal();
-        Button dates = actionButton("☰  日期", false); dates.setOnClickListener(v -> { diaryTimelinePanel.setVisibility(diaryTimelinePanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE); });
-        timelineBar.addView(dates, new LinearLayout.LayoutParams(dp(84), dp(31)));
+        Button dates = actionButton("▤  日期", false); dates.setContentDescription("从左侧打开日期栏"); dates.setOnClickListener(v -> showDiaryDateDrawer());
+        timelineBar.addView(dates, new LinearLayout.LayoutParams(dp(76), dp(31)));
         TextView selected = body(diarySelectedDate.isEmpty() ? (searchResults == null ? "全部纸页" : "搜索结果") : diarySelectedDate, 9); timelineBar.addView(selected, weightedWrap(1f, 9));
-        if (!diarySelectedDate.isEmpty() || searchResults != null) { TextView clear = label("查看全部", 9); clear.setOnClickListener(v -> { diarySelectedDate = ""; replaceScrollContent(sectionSee, buildDiaryContentPage(null)); }); timelineBar.addView(clear); }
+        if (!diarySelectedDate.isEmpty() || searchResults != null) { TextView clear = label("查看全部", 9); clear.setOnClickListener(v -> showAllDiaryPages()); timelineBar.addView(clear); }
         root.addView(timelineBar, marginBottom(5));
 
-        diaryTimelinePanel = buildDiaryTimeline(); diaryTimelinePanel.setVisibility(View.GONE); root.addView(diaryTimelinePanel, marginBottom(8));
         JSONArray entries = searchResults == null ? DiaryState.listEntries(this, diaryBookId) : searchResults;
+        if (!diarySelectedDate.isEmpty() && searchResults == null) root.addView(buildDiaryDatePageHeader(entries), marginBottom(8));
         int shown = 0; String lastDate = "";
         for (int i = 0; i < entries.length(); i++) {
             JSONObject entry = entries.optJSONObject(i); if (entry == null) continue;
             String date = entry.optString("date", ""); if (!diarySelectedDate.isEmpty() && !diarySelectedDate.equals(date)) continue;
-            if (!date.equals(lastDate)) { TextView day = label(date, 10); day.setPadding(dp(5), dp(7), 0, dp(3)); root.addView(day); lastDate = date; }
+            if (!date.equals(lastDate) && diarySelectedDate.isEmpty()) { TextView day = label(date, 10); day.setPadding(dp(5), dp(7), 0, dp(3)); root.addView(day); lastDate = date; }
             root.addView(searchResults == null ? buildDiaryEntryPaper(entry) : buildDiarySearchResultCard(entry), marginBottom(10)); shown++;
         }
         if (shown == 0) {
@@ -706,16 +705,105 @@ public class MainActivity extends Activity {
             String text = searchResults != null ? "没有找到写着这些词的纸页。" : (!diarySelectedDate.isEmpty() ? "这一天还没有留下文字。" : "日记本还是空白的。\nTA 可以通过 MCP 把今天轻轻写下来。");
             TextView emptyText = body(text, 10); emptyText.setGravity(Gravity.CENTER); emptyText.setLineSpacing(dp(4), 1f); empty.addView(emptyText); root.addView(empty);
         }
-        root.addView(body("日记保存在本机，卸载 App 可能导致丢失。", 8), matchWrapTop(4));
         return root;
     }
 
-    private LinearLayout buildDiaryTimeline() {
-        LinearLayout panel = editorialCard(); panel.setPadding(dp(14), dp(11), dp(14), dp(11)); panel.addView(label("日期抽屉", 9));
-        JSONArray all = DiaryState.listEntries(this, diaryBookId); String lastMonth = "", lastDate = "";
-        for (int i = 0; i < all.length(); i++) { JSONObject e = all.optJSONObject(i); if (e == null) continue; String date = e.optString("date", ""); if (date.equals(lastDate)) continue; lastDate = date; String month = date.length() >= 7 ? date.substring(0, 7) : date; if (!month.equals(lastMonth)) { panel.addView(title(month, 11), matchWrapTop(8)); lastMonth = month; } TextView day = body("○  " + date, 9); day.setPadding(dp(8), dp(6), dp(8), dp(6)); day.setOnClickListener(v -> { diarySelectedDate = date; diaryTimelinePanel.setVisibility(View.GONE); replaceScrollContent(sectionSee, buildDiaryContentPage(null)); }); day.setClickable(true); panel.addView(day); }
-        if (all.length() == 0) panel.addView(body("还没有可以跳转的日期。", 9), matchWrapTop(7));
-        return panel;
+    private View buildDiaryDatePageHeader(JSONArray entries) {
+        LinearLayout header = new LinearLayout(this); header.setOrientation(LinearLayout.VERTICAL); header.setPadding(dp(15), dp(11), dp(15), dp(11)); header.setBackground(UITheme.current(this).soft(18));
+        TextView date = title(diaryDateDisplay(diarySelectedDate), 14); date.setTypeface(Typeface.create("serif", Typeface.BOLD)); header.addView(date);
+        int count = 0; for (int i = 0; i < entries.length(); i++) { JSONObject e = entries.optJSONObject(i); if (e != null && diarySelectedDate.equals(e.optString("date", ""))) count++; }
+        header.addView(body(count > 0 ? ("这一天留下了 " + count + " 篇日记") : "这一天还没有留下文字。", 8), matchWrapTop(3));
+        return header;
+    }
+
+    private String diaryDateDisplay(String value) {
+        try { Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(value); return new SimpleDateFormat("M月d日 · EEEE", Locale.CHINA).format(date); }
+        catch (Exception e) { return value; }
+    }
+
+    private void showAllDiaryPages() {
+        diarySelectedDate = ""; diaryCurrentEntryId = "";
+        replaceScrollContent(sectionSee, buildDiaryContentPage(null)); animateDiaryPageSwap();
+    }
+
+    private void showDiaryDatePage(String date) {
+        showDiaryDatePage(date, "");
+    }
+
+    private void showDiaryDatePage(String date, String preferredEntryId) {
+        diarySelectedDate = date == null ? "" : date;
+        diaryCurrentEntryId = preferredEntryId == null ? "" : preferredEntryId;
+        JSONArray entries = DiaryState.listEntries(this, diaryBookId);
+        if (diaryCurrentEntryId.isEmpty()) for (int i = 0; i < entries.length(); i++) { JSONObject e = entries.optJSONObject(i); if (e != null && diarySelectedDate.equals(e.optString("date", ""))) { diaryCurrentEntryId = e.optString("id", ""); break; } }
+        replaceScrollContent(sectionSee, buildDiaryContentPage(null)); animateDiaryPageSwap();
+    }
+
+    private void animateDiaryPageSwap() {
+        if (sectionSee == null) return;
+        sectionSee.scrollTo(0, 0); sectionSee.setAlpha(.3f); sectionSee.setTranslationX(dp(18));
+        sectionSee.animate().alpha(1f).translationX(0f).setDuration(220).start();
+    }
+
+    private void showDiaryDateDrawer() {
+        if (diaryDateDrawerOverlay != null) return;
+        ViewGroup content = findViewById(android.R.id.content); if (content == null) return;
+        FrameLayout overlay = new FrameLayout(this); diaryDateDrawerOverlay = overlay;
+        overlay.setClickable(true); overlay.setFocusable(true); overlay.setBackgroundColor(Color.parseColor("#5C21151C")); overlay.setAlpha(0f);
+
+        LinearLayout panel = new LinearLayout(this); diaryDateDrawerPanel = panel; panel.setOrientation(LinearLayout.VERTICAL); panel.setPadding(dp(18), dp(28), dp(14), dp(22)); panel.setElevation(dp(12)); panel.setClickable(true); panel.setOnClickListener(v -> { });
+        GradientDrawable paper = new GradientDrawable(); paper.setColor(Color.parseColor("#FFFFFAF7")); float radius = dp(28); paper.setCornerRadii(new float[]{0, 0, radius, radius, radius, radius, 0, 0}); paper.setStroke(dp(1), Color.parseColor("#E9D3DC")); panel.setBackground(paper);
+
+        LinearLayout head = horizontal();
+        LinearLayout copy = new LinearLayout(this); copy.setOrientation(LinearLayout.VERTICAL); copy.addView(label("DATE INDEX", 8)); copy.addView(title("日期纸签", 18), matchWrapTop(3)); copy.addView(body("选择一天，翻开当天的纸页", 8), matchWrapTop(3)); head.addView(copy, weightedWrap(1f, 0));
+        Button close = iconButton("×", "收回日期侧边栏"); close.setOnClickListener(v -> closeDiaryDateDrawer(null)); head.addView(close, new LinearLayout.LayoutParams(dp(34), dp(32))); panel.addView(head);
+
+        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.setVerticalScrollBarEnabled(false);
+        LinearLayout dates = new LinearLayout(this); dates.setOrientation(LinearLayout.VERTICAL); dates.setPadding(0, dp(12), dp(4), dp(24)); buildDiaryDateDrawerItems(dates); scroll.addView(dates, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f); scrollLp.topMargin = dp(8); panel.addView(scroll, scrollLp);
+
+        int drawerWidth = Math.max(dp(260), (int)(getResources().getDisplayMetrics().widthPixels * .82f));
+        FrameLayout.LayoutParams panelLp = new FrameLayout.LayoutParams(drawerWidth, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START); overlay.addView(panel, panelLp);
+        overlay.setOnClickListener(v -> closeDiaryDateDrawer(null));
+        content.addView(overlay, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        panel.setTranslationX(-drawerWidth); overlay.post(() -> { overlay.animate().alpha(1f).setDuration(180).start(); panel.animate().translationX(0f).setDuration(250).start(); });
+    }
+
+    private void buildDiaryDateDrawerItems(LinearLayout root) {
+        JSONArray all = DiaryState.listEntries(this, diaryBookId);
+        if (all.length() == 0) { LinearLayout empty = editorialCard(); TextView text = body("还没有可以翻开的日期。\n先从“更多”里添加一篇日记吧。", 9); text.setGravity(Gravity.CENTER); text.setLineSpacing(dp(4), 1f); empty.addView(text); root.addView(empty, matchWrapTop(12)); return; }
+        String lastYear = "", lastMonth = "";
+        int i = 0;
+        while (i < all.length()) {
+            JSONObject first = all.optJSONObject(i); if (first == null) { i++; continue; }
+            String date = first.optString("date", ""); int count = 1; int j = i + 1;
+            while (j < all.length()) { JSONObject next = all.optJSONObject(j); if (next == null || !date.equals(next.optString("date", ""))) break; count++; j++; }
+            String year = date.length() >= 4 ? date.substring(0, 4) : ""; String month = date.length() >= 7 ? date.substring(5, 7) : "";
+            if (!year.equals(lastYear)) { TextView yearView = label(year + "年", 9); yearView.setPadding(dp(4), dp(10), 0, dp(4)); root.addView(yearView); lastYear = year; lastMonth = ""; }
+            if (!month.equals(lastMonth)) { TextView monthView = title(String.valueOf(parseDiaryNumber(month)) + "月", 13); monthView.setPadding(dp(4), dp(8), 0, dp(5)); root.addView(monthView); lastMonth = month; }
+            root.addView(buildDiaryDrawerDateItem(first, date, count), marginBottom(6)); i = j;
+        }
+    }
+
+    private int parseDiaryNumber(String value) { try { return Integer.parseInt(value); } catch (Exception e) { return 0; } }
+
+    private View buildDiaryDrawerDateItem(JSONObject entry, String date, int count) {
+        LinearLayout item = horizontal(); item.setPadding(dp(11), dp(9), dp(10), dp(9));
+        GradientDrawable bg = new GradientDrawable(); bg.setColor(diarySelectedDate.equals(date) ? Color.parseColor("#F7E3EB") : Color.parseColor("#FFFFFDFC")); bg.setCornerRadius(dp(17)); bg.setStroke(dp(1), diarySelectedDate.equals(date) ? Color.parseColor("#E3B9C9") : Color.parseColor("#F0E3E7")); item.setBackground(bg);
+        String day = date.length() >= 10 ? date.substring(8, 10) : date; TextView dayView = title(String.valueOf(parseDiaryNumber(day)), 19); dayView.setGravity(Gravity.CENTER); dayView.setTextColor(Color.parseColor("#8E6071")); item.addView(dayView, new LinearLayout.LayoutParams(dp(38), ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout copy = new LinearLayout(this); copy.setOrientation(LinearLayout.VERTICAL); String entryTitle = entry.optString("title", "没有标题的一页"); copy.addView(title(entryTitle, 11)); copy.addView(body((count > 1 ? count + " 篇 · " : "") + diaryDateDisplay(date), 8), matchWrapTop(2)); item.addView(copy, weightedWrap(1f, 8)); item.addView(label("›", 17));
+        item.setOnClickListener(v -> closeDiaryDateDrawer(() -> showDiaryDatePage(date))); item.setClickable(true); item.setFocusable(true); return item;
+    }
+
+    private void closeDiaryDateDrawer(Runnable after) {
+        FrameLayout overlay = diaryDateDrawerOverlay; LinearLayout panel = diaryDateDrawerPanel;
+        if (overlay == null || panel == null) { if (after != null) after.run(); return; }
+        overlay.animate().alpha(0f).setDuration(190).start();
+        panel.animate().translationX(-Math.max(panel.getWidth(), dp(280))).setDuration(220).withEndAction(() -> { ViewGroup parent = (ViewGroup)overlay.getParent(); if (parent != null) parent.removeView(overlay); if (diaryDateDrawerOverlay == overlay) { diaryDateDrawerOverlay = null; diaryDateDrawerPanel = null; } if (after != null) after.run(); }).start();
+    }
+
+    private void removeDiaryDateDrawerImmediately() {
+        if (diaryDateDrawerOverlay != null) { ViewGroup parent = (ViewGroup)diaryDateDrawerOverlay.getParent(); if (parent != null) parent.removeView(diaryDateDrawerOverlay); }
+        diaryDateDrawerOverlay = null; diaryDateDrawerPanel = null;
     }
 
     private View buildDiaryEntryPaper(JSONObject entry) {
@@ -736,7 +824,7 @@ public class MainActivity extends Activity {
         String content = entry.optString("content", ""); if (content.length() > 90) content = content.substring(0, 90) + "…";
         TextView preview = body(content, 9); preview.setMaxLines(3); preview.setLineSpacing(dp(3), 1f); card.addView(preview, matchWrapTop(6));
         String tagText = diaryTagsText(entry.optJSONArray("tags")); if (!tagText.isEmpty()) card.addView(body(tagText, 8), matchWrapTop(7));
-        card.setOnClickListener(v -> { diarySelectedDate = entry.optString("date", ""); diaryCurrentEntryId = entry.optString("id", ""); replaceScrollContent(sectionSee, buildDiaryContentPage(null)); }); card.setClickable(true); card.setFocusable(true);
+        card.setOnClickListener(v -> showDiaryDatePage(entry.optString("date", ""), entry.optString("id", ""))); card.setClickable(true); card.setFocusable(true);
         return card;
     }
 
@@ -756,9 +844,33 @@ public class MainActivity extends Activity {
     }
 
     private void showDiaryMoreMenu() {
-        String[] items = new String[]{"重命名日记本", "更换封面", "删除当前日记", "删除整个日记本"};
-        new AlertDialog.Builder(this).setTitle("更多").setItems(items, (d, which) -> { if (which == 0) showRenameDiaryBookDialog(); else if (which == 1) showDiaryCoverMenu(); else if (which == 2) confirmDeleteDiaryEntry(); else confirmDeleteDiaryBookFirst(); }).show();
+        String[] items = new String[]{"添加日记", "重命名日记本", "更换封面", "删除当前日记", "删除整个日记本"};
+        new AlertDialog.Builder(this).setTitle("更多").setItems(items, (d, which) -> { if (which == 0) showAddDiaryEntryDialog(); else if (which == 1) showRenameDiaryBookDialog(); else if (which == 2) showDiaryCoverMenu(); else if (which == 3) confirmDeleteDiaryEntry(); else confirmDeleteDiaryBookFirst(); }).show();
     }
+
+    private void showAddDiaryEntryDialog() {
+        if (DiaryState.bookById(this, diaryBookId) == null) { Toast.makeText(this, "先创建一本日记本", Toast.LENGTH_SHORT).show(); return; }
+        LinearLayout fields = new LinearLayout(this); fields.setOrientation(LinearLayout.VERTICAL); fields.setPadding(dp(8), dp(2), dp(8), dp(10));
+        EditText titleInput = new EditText(this); titleInput.setHint("标题"); titleInput.setSingleLine(true); fields.addView(titleInput);
+        EditText contentInput = new EditText(this); contentInput.setHint("写下今天想留下的内容……"); contentInput.setGravity(Gravity.TOP); contentInput.setMinLines(6); fields.addView(contentInput);
+        EditText moodInput = new EditText(this); moodInput.setHint("心情，例如 开心 / 想念 / 安静"); moodInput.setSingleLine(true); fields.addView(moodInput);
+        EditText tagsInput = new EditText(this); tagsInput.setHint("标签，用逗号分隔"); tagsInput.setSingleLine(true); fields.addView(tagsInput);
+        EditText dateInput = new EditText(this); dateInput.setHint("日期 YYYY-MM-DD"); dateInput.setSingleLine(true); dateInput.setText(diarySelectedDate.isEmpty() ? new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date()) : diarySelectedDate); fields.addView(dateInput);
+        EditText timeInput = new EditText(this); timeInput.setHint("时间段，例如 晚上"); timeInput.setSingleLine(true); timeInput.setText(diaryDefaultTimeLabel()); fields.addView(timeInput);
+        ScrollView scroll = new ScrollView(this); scroll.addView(fields, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("添加一篇日记").setView(scroll).setNegativeButton("取消", null).setPositiveButton("保存", null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String title = titleInput.getText().toString().trim(), content = contentInput.getText().toString().trim(), date = dateInput.getText().toString().trim();
+            if (title.isEmpty() || content.isEmpty()) { Toast.makeText(this, "请填写标题和正文", Toast.LENGTH_SHORT).show(); return; }
+            JSONArray tags = new JSONArray(); for (String tag : tagsInput.getText().toString().split("[,，]")) if (!tag.trim().isEmpty()) tags.put(tag.trim());
+            JSONObject saved = DiaryState.writeEntry(this, diaryBookId, title, content, moodInput.getText().toString(), tags, date, timeInput.getText().toString());
+            if (!saved.optBoolean("ok", false)) { Toast.makeText(this, "保存失败：" + saved.optString("error", "请检查内容"), Toast.LENGTH_LONG).show(); return; }
+            dialog.dismiss(); showDiaryDatePage(saved.optString("date", date), saved.optString("entry_id", "")); Toast.makeText(this, "日记已写进本机", Toast.LENGTH_SHORT).show();
+        }));
+        dialog.show();
+    }
+
+    private String diaryDefaultTimeLabel() { int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY); return hour < 6 ? "深夜" : (hour < 11 ? "早上" : (hour < 14 ? "中午" : (hour < 18 ? "下午" : "晚上"))); }
 
     private void showRenameDiaryBookDialog() {
         JSONObject book = DiaryState.bookById(this, diaryBookId); if (book == null) return;
@@ -1803,6 +1915,7 @@ public class MainActivity extends Activity {
     @Override protected void onPause() { uiHandler.removeCallbacks(refreshTick); super.onPause(); }
 
     @Override public void onBackPressed() {
+        if (diaryDateDrawerOverlay != null) { closeDiaryDateDrawer(null); return; }
         if (diaryPageOpen) { if (diaryContentOpen) showDiaryHomePage(); else showCompanionHomePage(); return; }
         if (guardianCalendarDetailOpen) { showGuardHomePage(); return; }
         super.onBackPressed();
