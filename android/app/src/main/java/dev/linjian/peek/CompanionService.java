@@ -172,6 +172,14 @@ public class CompanionService extends Service {
                 try { reportCommand(ctx, serverUrl, token, id, ok, result); uploadStateThrottled(serverUrl, token, ctx, false); } catch (Exception ignored) { }
                 return;
             }
+            if (action.contains("diary")) {
+                JSONObject rr = DiaryState.handleCommand(ctx, cmd);
+                boolean ok = rr.optBoolean("ok", false);
+                String result = rr.optString("result", rr.toString());
+                DebugState.append(ctx, "执行 TA 的日记命令 " + action + "：" + result);
+                try { reportCommand(ctx, serverUrl, token, id, ok, result); } catch (Exception ignored) { }
+                return;
+            }
             if ("get_guidian_state".equals(action) || "set_guidian_config".equals(action) || "trigger_guidian".equals(action) || "mark_guidian_returned".equals(action)) {
                 JSONObject rr = GuidianState.handleCommand(ctx, cmd);
                 boolean ok = rr.optBoolean("ok", false);

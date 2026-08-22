@@ -1046,6 +1046,164 @@ function makeServer() {
     return { content: [{ type: "text", text: JSON.stringify({ queued: result, observed_status: observed?.command || null, note: "命令会写入手机端本地守护日历；随后 get_life_state 可在 calendar_state 看到最近日子。" }, null, 2) }] };
   });
 
+  async function runGuardianCommand(payload, wait_seconds = 8) {
+    const queued = await postCommand(payload);
+    const commandId = queued?.command?.id;
+    const observed = commandId ? await waitCommand(commandId, wait_seconds) : null;
+    const command = observed?.command || null;
+    let phone_result = null;
+    try { phone_result = command?.result ? JSON.parse(command.result) : null; } catch { phone_result = command?.result || null; }
+    return { queued, command, phone_result };
+  }
+
+  const guardianDayFields = {
+    title: z.string().min(1).max(80),
+    date: z.string().min(3).max(20).describe("阳历：2026-08-23 或 08-23；农历：07-07"),
+    date_type: z.enum(["solar", "lunar"]).default("solar"),
+    repeat_type: z.enum(["yearly", "none"]).default("yearly"),
+    group: z.string().default("our_days").describe("our_days/user/companion/festival/study/project/life，或中文分组"),
+    note: z.string().max(240).default(""),
+    remind_days_before: z.number().int().min(0).max(30).default(3),
+    banner_enabled: z.boolean().default(true),
+    device_id: z.string().default(DEFAULT_DEVICE),
+    wait_seconds: z.number().int().min(3).max(20).default(8)
+  };
+
+  server.tool("list_guardian_days", "查看手机本机守护日历的完整事件列表及稳定 id。删除按日期描述的事件前必须先调用本工具找到唯一 id；同一天可能有多条事件。", {
+    device_id: z.string().default(DEFAULT_DEVICE),
+    wait_seconds: z.number().int().min(3).max(20).default(8)
+  }, async ({ device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    const result = await runGuardianCommand({ action: "get_calendar_state", device_id, payload: {} }, wait_seconds);
+    await postCompanionAction("list_guardian_days", { summary: "查看了守护日历事件列表" });
+    return textResult({ ok: result.command?.status === "completed", action_done: "已读取守护日历", ...result });
+  });
+
+  server.tool("add_guardian_day", "添加一条守护日历事件。成功结果会包含手机端生成的稳定事件 id。", guardianDayFields,
+    async ({ title, date, date_type = "solar", repeat_type = "yearly", group = "our_days", note = "", remind_days_before = 3, banner_enabled = true, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+      const payload = { title, date, date_type, repeat_type, group, note, remind_days_before, banner_enabled, created_by: "companion" };
+      const result = await runGuardianCommand({ action: "upsert_calendar_event", device_id, ...payload, payload }, wait_seconds);
+      await postCompanionAction("add_guardian_day", { summary: `记下了「${title}」` });
+      return textResult({ ok: result.command?.status === "completed", action_done: `已添加守护日历事件「${title}」`, title, date, ...result });
+    });
+
+  server.tool("update_guardian_day", "按稳定 id 修改一条守护日历事件，不影响同日或其他日期的事件。请先 list_guardian_days 确认 id。", {
+    id: z.string().min(1).max(100),
+    ...guardianDayFields
+  }, async ({ id, title, date, date_type = "solar", repeat_type = "yearly", group = "our_days", note = "", remind_days_before = 3, banner_enabled = true, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    const payload = { id, title, date, date_type, repeat_type, group, note, remind_days_before, banner_enabled, created_by: "companion" };
+    const result = await runGuardianCommand({ action: "upsert_calendar_event", device_id, ...payload, payload }, wait_seconds);
+    await postCompanionAction("update_guardian_day", { summary: `更新了「${title}」` });
+    return textResult({ ok: result.command?.status === "completed", action_done: `已更新守护日历事件「${title}」`, id, title, date, ...result });
+  });
+
+  server.tool("delete_guardian_day", "按稳定 id 删除一条守护日历事件。若用户只描述日期/标题，必须先 list_guardian_days 找到对应 id，避免误删同日其他事件。", {
+    id: z.string().min(1).max(100),
+    confirm: z.boolean().describe("必须明确为 true 才会删除"),
+    device_id: z.string().default(DEFAULT_DEVICE),
+    wait_seconds: z.number().int().min(3).max(20).default(8)
+  }, async ({ id, confirm, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    if (confirm !== true) return textResult({ ok: false, error: "confirmation_required", message: "删除守护日历事件前必须把 confirm 设为 true。", id });
+    const result = await runGuardianCommand({ action: "delete_calendar_event", device_id, id, confirm: true, payload: { id, confirm: true } }, wait_seconds);
+    await postCompanionAction("delete_guardian_day", { summary: `移除了守护日历事件 ${id}` });
+    return textResult({ ok: result.command?.status === "completed", action_done: "已删除守护日历事件", id, ...result });
+  });
+
+  async function runDiaryCommand(action, values, device_id = DEFAULT_DEVICE, wait_seconds = 8) {
+    const payload = { ...(values || {}) };
+    const queued = await postCommand({ action, device_id, ...payload, payload });
+    const commandId = queued?.command?.id;
+    const observed = commandId ? await waitCommand(commandId, wait_seconds) : null;
+    const command = observed?.command || null;
+    let phone_result = null;
+    try { phone_result = command?.result ? JSON.parse(command.result) : null; } catch { phone_result = command?.result || null; }
+    return { queued, command, phone_result };
+  }
+
+  const diaryWaitFields = {
+    device_id: z.string().default(DEFAULT_DEVICE),
+    wait_seconds: z.number().int().min(3).max(20).default(8)
+  };
+
+  server.tool("create_diary_book", "在手机本机创建一本“TA 的日记”。日记默认不上传云端；成功结果包含 book_id。", {
+    name: z.string().min(1).max(60),
+    subtitle: z.string().max(100).default("把今天看见的你，轻轻写下来。"),
+    cover_style: z.string().max(80).default("default_soft_notebook"),
+    ...diaryWaitFields
+  }, async ({ name, subtitle, cover_style, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    const result = await runDiaryCommand("create_diary_book", { name, subtitle, cover_style }, device_id, wait_seconds);
+    await postCompanionAction("create_diary_book", { summary: `创建了日记本「${name}」` });
+    return textResult({ ok: result.command?.status === "completed", action_done: `日记本「${name}」已在本机创建`, name, ...result });
+  });
+
+  server.tool("list_diary_books", "读取手机本机的“TA 的日记”本列表及 book_id。", diaryWaitFields,
+    async ({ device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => textResult({ action_done: "已读取本机日记本", ...(await runDiaryCommand("list_diary_books", {}, device_id, wait_seconds)) }));
+
+  server.tool("rename_diary_book", "按 book_id 重命名本机日记本，也可更新封面小字。", {
+    book_id: z.string().min(1).max(100), name: z.string().min(1).max(60), subtitle: z.string().max(100).optional(), ...diaryWaitFields
+  }, async ({ book_id, name, subtitle, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    const values = { book_id, name }; if (subtitle !== undefined) values.subtitle = subtitle;
+    const result = await runDiaryCommand("rename_diary_book", values, device_id, wait_seconds);
+    await postCompanionAction("rename_diary_book", { summary: `把日记本改名为「${name}」` });
+    return textResult({ ok: result.command?.status === "completed", action_done: `日记本已重命名为「${name}」`, book_id, name, ...result });
+  });
+
+  server.tool("update_diary_book_cover", "更新日记本封面样式。cover_uri 仅适合用户已在手机本机选择并授权的内容 URI；通常使用 cover_style。", {
+    book_id: z.string().min(1).max(100), cover_style: z.string().max(80).optional(), cover_uri: z.string().max(1000).optional(), ...diaryWaitFields
+  }, async ({ book_id, cover_style, cover_uri, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    const values = { book_id }; if (cover_style !== undefined) values.cover_style = cover_style; if (cover_uri !== undefined) values.cover_uri = cover_uri;
+    const result = await runDiaryCommand("update_diary_book_cover", values, device_id, wait_seconds);
+    return textResult({ ok: result.command?.status === "completed", action_done: "日记本封面已更新", book_id, ...result });
+  });
+
+  server.tool("write_diary_entry", "以 TA/AI 的视角把一篇日记写入手机本机。成功结果清楚返回标题、日期、book_id 和 entry_id。", {
+    book_id: z.string().min(1).max(100), title: z.string().min(1).max(100), content: z.string().min(1).max(12000), mood: z.string().max(40).default(""),
+    tags: z.array(z.string().max(30)).max(20).default([]), date: z.string().default(""), time_label: z.string().max(30).default(""), ...diaryWaitFields
+  }, async ({ book_id, title, content, mood = "", tags = [], date = "", time_label = "", device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    const result = await runDiaryCommand("write_diary_entry", { book_id, title, content, mood, tags, date, time_label }, device_id, wait_seconds);
+    await postCompanionAction("write_diary_entry", { summary: `写下日记「${title}」` });
+    return textResult({ ok: result.command?.status === "completed", action_done: `日记「${title}」已写入本机`, book_id, title, date, ...result });
+  });
+
+  server.tool("list_diary_entries", "按 book_id 列出本机日记，结果包含日期、标题、心情、标签及 entry_id。", {
+    book_id: z.string().min(1).max(100), ...diaryWaitFields
+  }, async ({ book_id, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => textResult({ action_done: "已读取日记列表", book_id, ...(await runDiaryCommand("list_diary_entries", { book_id }, device_id, wait_seconds)) }));
+
+  server.tool("read_diary_entry", "按 entry_id 读取一篇本机日记的完整正文。", {
+    entry_id: z.string().min(1).max(100), ...diaryWaitFields
+  }, async ({ entry_id, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => textResult({ action_done: "已读取日记", entry_id, ...(await runDiaryCommand("read_diary_entry", { entry_id }, device_id, wait_seconds)) }));
+
+  server.tool("search_diary_entries", "在一本本机日记中按标题、正文、标签、心情关键词和日期范围搜索。", {
+    book_id: z.string().min(1).max(100), keyword: z.string().max(200).default(""), date_from: z.string().max(10).default(""), date_to: z.string().max(10).default(""),
+    tags: z.array(z.string().max(30)).max(20).default([]), ...diaryWaitFields
+  }, async ({ book_id, keyword = "", date_from = "", date_to = "", tags = [], device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => textResult({ action_done: "日记搜索完成", book_id, ...(await runDiaryCommand("search_diary_entries", { book_id, keyword, date_from, date_to, tags }, device_id, wait_seconds)) }));
+
+  server.tool("update_diary_entry", "按 entry_id 修改一篇日记。只传需要变化的字段；未传字段保持不变。", {
+    entry_id: z.string().min(1).max(100), title: z.string().max(100).optional(), content: z.string().max(12000).optional(), mood: z.string().max(40).optional(),
+    tags: z.array(z.string().max(30)).max(20).optional(), date: z.string().max(10).optional(), time_label: z.string().max(30).optional(), ...diaryWaitFields
+  }, async ({ entry_id, title, content, mood, tags, date, time_label, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    const values = { entry_id }; for (const [key, value] of Object.entries({ title, content, mood, tags, date, time_label })) if (value !== undefined) values[key] = value;
+    const result = await runDiaryCommand("update_diary_entry", values, device_id, wait_seconds);
+    return textResult({ ok: result.command?.status === "completed", action_done: "日记已更新", entry_id, ...result });
+  });
+
+  server.tool("delete_diary_entry", "删除一篇本机日记。必须明确 confirm=true；成功结果包含 entry_id。", {
+    entry_id: z.string().min(1).max(100), confirm: z.boolean().describe("必须明确为 true 才会删除"), ...diaryWaitFields
+  }, async ({ entry_id, confirm, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    if (confirm !== true) return textResult({ ok: false, error: "confirmation_required", message: "删除日记前必须把 confirm 设为 true。", entry_id });
+    const result = await runDiaryCommand("delete_diary_entry", { entry_id, confirm: true }, device_id, wait_seconds);
+    await postCompanionAction("delete_diary_entry", { summary: `删除了日记 ${entry_id}` });
+    return textResult({ ok: result.command?.status === "completed", action_done: "日记已删除", entry_id, ...result });
+  });
+
+  server.tool("delete_diary_book", "高风险：删除整本本机日记及其中全部内容。调用前必须向用户二次确认，并明确传 confirm=true。", {
+    book_id: z.string().min(1).max(100), confirm: z.boolean().describe("用户二次确认后必须明确为 true"), ...diaryWaitFields
+  }, async ({ book_id, confirm, device_id = DEFAULT_DEVICE, wait_seconds = 8 }) => {
+    if (confirm !== true) return textResult({ ok: false, error: "confirmation_required", message: "删除整个日记本前必须完成二次确认并把 confirm 设为 true。", book_id });
+    const result = await runDiaryCommand("delete_diary_book", { book_id, confirm: true }, device_id, wait_seconds);
+    await postCompanionAction("delete_diary_book", { summary: `删除了整本日记 ${book_id}` });
+    return textResult({ ok: result.command?.status === "completed", action_done: "日记本及其中日记已删除", book_id, ...result });
+  });
+
 
   server.tool("get_senses_state", "读取掌心窗通用状态：生活状态与归电状态，不截图。用于确认当前设备和陪伴连接状态。", { device_id: z.string().default(DEFAULT_DEVICE) }, async ({ device_id = DEFAULT_DEVICE }) => {
     const lifeRes = await linjianFetch(`/api/life_state?device_id=${encodeURIComponent(device_id)}`);
@@ -1629,6 +1787,9 @@ app.get("/health", (_req, res) => res.json({
   configured_linjian_url: RAW_LINJIAN_URL || "",
   effective_linjian_url: effectiveLinjianUrl(),
   fallback_linjian_urls: LINJIAN_URL_CANDIDATES.filter((u) => u !== RAW_LINJIAN_URL),
+  guardian_day_tools: true,
+  diary_tools: true,
+  diary_storage: "phone_local",
   stability_note: "v0.3.6.6 降低手机端轮询与状态上传压力；遇到 429 会返回限流提示。"
 }));
 app.post("/mcp", async (req, res) => {

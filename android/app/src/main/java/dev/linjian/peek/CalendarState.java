@@ -14,6 +14,9 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashSet;
+import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 
 /** 守护日历：纪念日、节日、倒数日、提前三天横幅提醒，并接入生活状态层。 */
 public class CalendarState {
@@ -93,6 +96,26 @@ public class CalendarState {
             for (int i = 0; i < max; i++) arr.put(list.get(i).toJson());
         } catch (Exception ignored) { }
         return arr;
+    }
+
+    /** 返回指定月份真正应显示的事件，包含已过去的日期，供月历标记和详情使用。 */
+    public static JSONArray occurrencesForMonth(Context ctx, int year, int monthIndex) {
+        JSONArray out = new JSONArray();
+        try {
+            ArrayList<JSONObject> source = new ArrayList<>();
+            JSONArray custom = events(ctx);
+            for (int i = 0; i < custom.length(); i++) { JSONObject e = custom.optJSONObject(i); if (e != null) source.add(e); }
+            source.addAll(builtinEvents());
+            Calendar today = midnight(Calendar.getInstance());
+            for (JSONObject e : source) {
+                boolean builtin = e.optString("id", "").startsWith("builtin_");
+                Calendar date = dateInYear(e, year);
+                if (date == null || date.get(Calendar.MONTH) != monthIndex) continue;
+                Occurrence o = occurrenceFrom(e, date, daysBetween(today, date), builtin);
+                if (o != null) out.put(o.toJson());
+            }
+        } catch (Exception ignored) { }
+        return out;
     }
 
     public static String summaryLine(Context ctx) {
@@ -281,8 +304,36 @@ public class CalendarState {
         try {
             String raw = AppPrefs.get(ctx).getString(KEY_EVENTS, "[]");
             JSONArray arr = new JSONArray(raw == null || raw.trim().isEmpty() ? "[]" : raw);
+            // 旧版本的日历事件可能没有 id。读取时一次性补上可重复得到、且不会
+            // 随应用重启变化的 UUID，后续编辑/删除始终只针对这一条事件。
+            boolean migrated = false;
+            HashSet<String> used = new HashSet<>();
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject e = arr.optJSONObject(i);
+                if (e == null) continue;
+                String id = safe(e.optString("id", ""));
+                if (id.length() == 0 || used.contains(id)) {
+                    String seed = "guardian-day|" + eventIdentityKey(e) + "|" + i + "|" + e.optString("updated_at", "");
+                    id = "cal_" + UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString();
+                    while (used.contains(id)) id = "cal_" + UUID.randomUUID().toString();
+                    e.put("id", id);
+                    migrated = true;
+                }
+                used.add(id);
+            }
+            if (migrated) saveEvents(ctx, arr);
             return arr;
         } catch (Exception e) { return new JSONArray(); }
+    }
+
+    public static JSONObject eventById(Context ctx, String id) {
+        if (id == null || id.trim().isEmpty()) return null;
+        JSONArray arr = events(ctx);
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject e = arr.optJSONObject(i);
+            if (e != null && id.equals(e.optString("id", ""))) return e;
+        }
+        return null;
     }
 
     private static boolean saveEvents(Context ctx, JSONArray arr) {
@@ -306,22 +357,33 @@ public class CalendarState {
             if (date == null) return;
             int days = daysBetween(today, date);
             if (days < 0) return;
-            Occurrence o = new Occurrence();
-            o.id = e.optString("id", builtin ? ("builtin_" + e.optString("title", "")) : "");
-            o.title = e.optString("title", "");
-            o.group = e.optString("group", builtin ? "festival" : "our_days");
-            o.note = e.optString("note", "");
-            o.date = date;
-            o.daysLeft = days;
-            o.dateType = e.optString("date_type", TYPE_SOLAR);
-            o.repeatType = e.optString("repeat_type", REPEAT_YEARLY);
-            o.remindDays = clamp(e.optInt("remind_days_before", DEFAULT_REMIND_DAYS), 0, 30);
-            o.bannerEnabled = e.optBoolean("banner_enabled", true);
-            o.createdBy = e.optString("created_by", builtin ? "system" : "user");
-            o.builtin = builtin;
-            if (TYPE_LUNAR.equals(o.dateType)) o.lunarLabel = "农历" + e.optInt("lunar_month", 0) + "月" + e.optInt("lunar_day", 0);
-            list.add(o);
+            Occurrence o = occurrenceFrom(e, date, days, builtin);
+            if (o != null) list.add(o);
         } catch (Exception ignored) { }
+    }
+
+    private static Occurrence occurrenceFrom(JSONObject e, Calendar date, int days, boolean builtin) {
+        if (e == null || date == null) return null;
+        Occurrence o = new Occurrence();
+        o.id = e.optString("id", builtin ? ("builtin_" + e.optString("title", "")) : "");
+        o.title = e.optString("title", ""); o.group = e.optString("group", builtin ? "festival" : "our_days"); o.note = e.optString("note", "");
+        o.date = date; o.daysLeft = days; o.dateType = e.optString("date_type", TYPE_SOLAR); o.repeatType = e.optString("repeat_type", REPEAT_YEARLY);
+        o.remindDays = clamp(e.optInt("remind_days_before", DEFAULT_REMIND_DAYS), 0, 30); o.bannerEnabled = e.optBoolean("banner_enabled", true);
+        o.createdBy = e.optString("created_by", builtin ? "system" : "user"); o.builtin = builtin;
+        if (TYPE_LUNAR.equals(o.dateType)) o.lunarLabel = "农历" + e.optInt("lunar_month", 0) + "月" + e.optInt("lunar_day", 0);
+        return o;
+    }
+
+    private static Calendar dateInYear(JSONObject e, int year) {
+        try {
+            String type = e.optString("date_type", TYPE_SOLAR);
+            if (TYPE_LUNAR.equals(type)) return lunarToSolar(year, e.optInt("lunar_month", 0), e.optInt("lunar_day", 0), e.optBoolean("lunar_is_leap", false));
+            String raw = e.optString("solar_date", e.optString("date", ""));
+            Calendar parsed = parseSolarCalendar(raw, year); if (parsed == null) return null;
+            if (REPEAT_YEARLY.equals(e.optString("repeat_type", REPEAT_YEARLY))) parsed.set(Calendar.YEAR, year);
+            else if (parsed.get(Calendar.YEAR) != year) return null;
+            return midnight(parsed);
+        } catch (Exception ex) { return null; }
     }
 
     private static Calendar nextDateFor(JSONObject e, Calendar today) {
@@ -406,7 +468,7 @@ public class CalendarState {
     }
 
     private static Calendar midnight(Calendar c) { c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0); return c; }
-    private static String daysText(int d) { if (d == 0) return "今天"; if (d == 1) return "明天"; return "还有 " + d + " 天"; }
+    private static String daysText(int d) { if (d < 0) return "已经过去 " + Math.abs(d) + " 天"; if (d == 0) return "今天"; if (d == 1) return "明天"; return "还有 " + d + " 天"; }
     private static String bannerText(String title, int d) { if (d == 0) return "今天是" + title + "，记得回来看看。"; if (d == 1) return "明天是" + title + "，已经帮你记着。"; return "还有 " + d + " 天是" + title + "，别忘了这份小仪式。"; }
     private static String formatDate(Calendar c) { return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(c.getTime()); }
     private static String formatDateTime(long ms) { return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA).format(new Date(ms)); }
