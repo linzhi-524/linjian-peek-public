@@ -691,16 +691,15 @@ public class MainActivity extends Activity {
             FrameLayout.LayoutParams grooveLp = new FrameLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START); grooveLp.leftMargin = dp(offset); grooveLp.topMargin = dp(14); grooveLp.bottomMargin = dp(14); surface.addView(groove, grooveLp);
         }
 
-        LinearLayout plate = new LinearLayout(this); plate.setOrientation(LinearLayout.VERTICAL); plate.setGravity(Gravity.CENTER); plate.setPadding(dp(14), dp(12), dp(14), dp(12)); plate.setElevation(dp(1));
-        GradientDrawable plateBg = new GradientDrawable(); plateBg.setColor(Color.parseColor("#A8F4E8EF")); plateBg.setCornerRadius(dp(15)); plateBg.setStroke(dp(1), Color.parseColor("#78D2B5C3")); plate.setBackground(plateBg);
-        TextView tiny = label("PRIVATE NOTEBOOK", 8); tiny.setTextColor(Color.parseColor("#986478")); tiny.setLetterSpacing(.14f); tiny.setGravity(Gravity.CENTER); plate.addView(tiny);
-        TextView name = title(book == null ? "TA 的日记" : book.optString("name", "TA 的日记"), 20); name.setTextColor(Color.parseColor("#684451")); name.setGravity(Gravity.CENTER); name.setLineSpacing(dp(4), 1f); plate.addView(name, matchWrapTop(12));
+        LinearLayout plate = new LinearLayout(this); plate.setOrientation(LinearLayout.VERTICAL); plate.setGravity(Gravity.CENTER); plate.setPadding(dp(8), dp(8), dp(8), dp(8));
+        TextView tiny = label("PRIVATE NOTEBOOK", 8); tiny.setTextColor(Color.parseColor("#895B6C")); tiny.setLetterSpacing(.14f); tiny.setGravity(Gravity.CENTER); tiny.setShadowLayer(dp(.8f), 0, dp(.5f), Color.parseColor("#99FFF9FC")); plate.addView(tiny);
+        TextView name = title(book == null ? "TA 的日记" : book.optString("name", "TA 的日记"), 21); name.setTextColor(Color.parseColor("#5E3D4A")); name.setGravity(Gravity.CENTER); name.setLineSpacing(dp(4), 1f); name.setShadowLayer(dp(1.1f), 0, dp(.7f), Color.parseColor("#B8FFF9FC")); plate.addView(name, matchWrapTop(13));
         View rule = new View(this); rule.setBackgroundColor(Color.parseColor("#C18A9E")); LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(dp(76), dp(1)); ruleLp.topMargin = dp(12); ruleLp.gravity = Gravity.CENTER; plate.addView(rule, ruleLp);
-        TextView subtitle = body(book == null ? "把今天轻轻藏起来" : book.optString("subtitle", "把今天轻轻藏起来"), 9); subtitle.setTextColor(Color.parseColor("#835E6B")); subtitle.setGravity(Gravity.CENTER); plate.addView(subtitle, matchWrapTop(9));
+        TextView subtitle = body(book == null ? "把今天轻轻藏起来" : book.optString("subtitle", "把今天轻轻藏起来"), 9); subtitle.setTextColor(Color.parseColor("#74515F")); subtitle.setGravity(Gravity.CENTER); subtitle.setShadowLayer(dp(.8f), 0, dp(.5f), Color.parseColor("#A8FFF9FC")); plate.addView(subtitle, matchWrapTop(9));
         int entryCount = DiaryState.listEntries(this, book == null ? "" : book.optString("id", "")).length();
         String year = new SimpleDateFormat("yyyy", Locale.US).format(new Date());
-        TextView volume = label(year + "  ·  VOL.01  ·  " + entryCount + " 篇", 7); volume.setTextColor(Color.parseColor("#A07886")); volume.setGravity(Gravity.CENTER); plate.addView(volume, matchWrapTop(10));
-        FrameLayout.LayoutParams plateLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER); plateLp.leftMargin = dp(52); plateLp.rightMargin = dp(52); surface.addView(plate, plateLp);
+        TextView volume = label(year + "  ·  VOL.01  ·  " + entryCount + " 篇", 7); volume.setTextColor(Color.parseColor("#8F6877")); volume.setGravity(Gravity.CENTER); volume.setShadowLayer(dp(.7f), 0, dp(.5f), Color.parseColor("#A8FFF9FC")); plate.addView(volume, matchWrapTop(10));
+        FrameLayout.LayoutParams plateLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER); plateLp.leftMargin = dp(44); plateLp.rightMargin = dp(44); surface.addView(plate, plateLp);
 
         TextView open = body("轻触翻开", 8); open.setGravity(Gravity.CENTER); open.setTextColor(Color.parseColor("#8E6675"));
         FrameLayout.LayoutParams openLp = new FrameLayout.LayoutParams(dp(104), dp(30), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL); openLp.bottomMargin = dp(35); surface.addView(open, openLp);
@@ -1035,7 +1034,7 @@ public class MainActivity extends Activity {
         add.setOnClickListener(v -> showCalendarEventDialog());
         top.addView(add, new LinearLayout.LayoutParams(dp(36), dp(32)));
         root.addView(top, marginBottom(6));
-        root.addView(buildGuardianCalendarPage(), marginBottom(12));
+        LinearLayout.LayoutParams calendarPageLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); calendarPageLp.topMargin = dp(22); calendarPageLp.bottomMargin = dp(12); root.addView(buildGuardianCalendarPage(), calendarPageLp);
         return root;
     }
 
