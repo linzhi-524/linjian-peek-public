@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
     private Button tabSettings, tabSee, tabControl, tabLife, tabGate, tabDebug;
     private View quickSeeButton, quickGuardButton;
     private View sectionSettings, sectionSee, sectionControl, sectionLife, sectionGate, sectionDebug;
-    private View heroCard, bottomNav;
+    private View heroCard, bottomNav, topHeader;
     private View drawerTheme, drawerNowState, drawerConnection, drawerPermission, drawerControlTest, drawerKnownApps, drawerHomeMode, drawerGateAdd, drawerReminder, drawerCycle, drawerDebug, drawerAppGate, drawerWeather, drawerVersion;
     private View drawerGuidian, drawerGuidianSettings, drawerCalendar;
     private EditText serverUrl, tokenInput, deviceInput, intervalInput, cityInput, weatherInput, userNameInput, companionNameInput;
@@ -205,7 +205,7 @@ public class MainActivity extends Activity {
     }
 
     private void bindViews() {
-        brandText = findViewById(R.id.brandText); headerTitle = findViewById(R.id.headerTitle); headerSubtitle = findViewById(R.id.headerSubtitle); statusText = findViewById(R.id.statusText); debugText = findViewById(R.id.debugText); lifeStatusText = findViewById(R.id.lifeStatusText); lifeSummaryText = findViewById(R.id.lifeSummaryText); knownAppsText = findViewById(R.id.knownAppsText); homeModeStatusText = findViewById(R.id.homeModeStatusText); gateStatusText = findViewById(R.id.gateStatusText); nowStatePermissionText = findViewById(R.id.nowStatePermissionText);
+        topHeader = findViewById(R.id.topHeader); brandText = findViewById(R.id.brandText); headerTitle = findViewById(R.id.headerTitle); headerSubtitle = findViewById(R.id.headerSubtitle); statusText = findViewById(R.id.statusText); debugText = findViewById(R.id.debugText); lifeStatusText = findViewById(R.id.lifeStatusText); lifeSummaryText = findViewById(R.id.lifeSummaryText); knownAppsText = findViewById(R.id.knownAppsText); homeModeStatusText = findViewById(R.id.homeModeStatusText); gateStatusText = findViewById(R.id.gateStatusText); nowStatePermissionText = findViewById(R.id.nowStatePermissionText);
         heroLabelText = findViewById(R.id.heroLabelText); overviewAdviceText = findViewById(R.id.overviewAdviceText); overviewSecondaryText = findViewById(R.id.overviewSecondaryText); overviewMetaText = findViewById(R.id.overviewMetaText); overviewBatteryText = findViewById(R.id.overviewBatteryText); overviewBatteryDetail = findViewById(R.id.overviewBatteryDetail); overviewAppText = findViewById(R.id.overviewAppText); overviewAppDetail = findViewById(R.id.overviewAppDetail); overviewScreenText = findViewById(R.id.overviewScreenText); overviewScreenDetail = findViewById(R.id.overviewScreenDetail); overviewWeatherText = findViewById(R.id.overviewWeatherText); overviewWeatherDetail = findViewById(R.id.overviewWeatherDetail); weatherLocationsText = findViewById(R.id.weatherLocationsText); themeText = findViewById(R.id.themeText); calendarSummaryText = findViewById(R.id.calendarSummaryText); calendarDetailText = findViewById(R.id.calendarDetailText);
         overviewBatteryLabel = findViewById(R.id.overviewBatteryLabel); overviewAppLabel = findViewById(R.id.overviewAppLabel); overviewScreenLabel = findViewById(R.id.overviewScreenLabel); overviewWeatherLabel = findViewById(R.id.overviewWeatherLabel); quickSeeTitle = findViewById(R.id.quickSeeTitle); quickSeeDetail = findViewById(R.id.quickSeeDetail); quickSeeArrow = findViewById(R.id.quickSeeArrow); quickGuardTitle = findViewById(R.id.quickGuardTitle); quickGuardDetail = findViewById(R.id.quickGuardDetail); quickGuardArrow = findViewById(R.id.quickGuardArrow); quickSeeIcon = findViewById(R.id.quickSeeIcon); quickGuardIcon = findViewById(R.id.quickGuardIcon);
         guidianSummaryText = findViewById(R.id.guidianSummaryText); guidianDetailText = findViewById(R.id.guidianDetailText); guidianSettingsStatusText = findViewById(R.id.guidianSettingsStatusText); guidianAvatarText = findViewById(R.id.guidianAvatarText); versionStatusText = findViewById(R.id.versionStatusText); updateChangelogText = findViewById(R.id.updateChangelogText); licenseSummaryText = findViewById(R.id.licenseSummaryText);
@@ -630,8 +630,11 @@ public class MainActivity extends Activity {
             FrameLayout cover = buildDiaryCover(book);
             cover.setOnClickListener(v -> playDiaryOpenAnimation(cover));
             cover.setClickable(true); cover.setFocusable(true);
-            LinearLayout coverWrap = new LinearLayout(this); coverWrap.setGravity(Gravity.CENTER); coverWrap.addView(cover, new LinearLayout.LayoutParams(dp(244), dp(350)));
-            root.addView(coverWrap, marginBottom(14));
+            cover.setRotation(-.8f);
+            int coverWidth = Math.min(dp(292), getResources().getDisplayMetrics().widthPixels - dp(46));
+            int coverHeight = Math.round(coverWidth * 1.44f);
+            LinearLayout coverWrap = new LinearLayout(this); coverWrap.setGravity(Gravity.CENTER); coverWrap.setClipChildren(false); coverWrap.addView(cover, new LinearLayout.LayoutParams(coverWidth, coverHeight));
+            root.addView(coverWrap, marginBottom(17));
 
             LinearLayout coverActions = horizontal(); coverActions.setGravity(Gravity.CENTER);
             Button rename = actionButton("修改名字", false); rename.setOnClickListener(v -> showRenameDiaryBookDialog());
@@ -646,24 +649,57 @@ public class MainActivity extends Activity {
 
     private FrameLayout buildDiaryCover(JSONObject book) {
         FrameLayout cover = new FrameLayout(this);
+        cover.setClipChildren(false); cover.setClipToPadding(false);
+
+        FrameLayout pages = new FrameLayout(this);
+        GradientDrawable pageStack = new GradientDrawable();
+        pageStack.setColor(Color.parseColor("#FFF9EF")); pageStack.setCornerRadius(dp(20)); pageStack.setStroke(dp(1), Color.parseColor("#E7D9CC"));
+        pages.setBackground(pageStack); pages.setElevation(dp(3));
+        FrameLayout.LayoutParams pagesLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT); pagesLp.leftMargin = dp(9); pagesLp.topMargin = dp(7); cover.addView(pages, pagesLp);
+        for (int i = 0; i < 3; i++) {
+            View pageLine = new View(this); pageLine.setBackgroundColor(Color.parseColor("#E9DACD"));
+            FrameLayout.LayoutParams lineLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1), Gravity.BOTTOM); lineLp.leftMargin = dp(24); lineLp.rightMargin = dp(7); lineLp.bottomMargin = dp(4 + i * 3); pages.addView(pageLine, lineLp);
+            View sideLine = new View(this); sideLine.setBackgroundColor(Color.parseColor("#E9DACD"));
+            FrameLayout.LayoutParams sideLp = new FrameLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.END); sideLp.topMargin = dp(26); sideLp.bottomMargin = dp(19); sideLp.rightMargin = dp(4 + i * 3); pages.addView(sideLine, sideLp);
+        }
+
+        View ribbon = new View(this);
+        GradientDrawable ribbonBg = new GradientDrawable(); ribbonBg.setColor(Color.parseColor("#C9879D")); ribbonBg.setCornerRadius(dp(5)); ribbon.setBackground(ribbonBg); ribbon.setAlpha(.9f);
+        FrameLayout.LayoutParams ribbonLp = new FrameLayout.LayoutParams(dp(15), dp(54), Gravity.END | Gravity.BOTTOM); ribbonLp.rightMargin = dp(58); cover.addView(ribbon, ribbonLp);
+
+        FrameLayout surface = new FrameLayout(this);
         GradientDrawable base = new GradientDrawable();
         base.setColors(new int[]{Color.parseColor("#F4CED9"), Color.parseColor("#E8BFCF")});
         base.setOrientation(GradientDrawable.Orientation.TL_BR);
         base.setCornerRadius(dp(18)); base.setStroke(dp(1), Color.parseColor("#DDAFBE"));
-        cover.setBackground(base); cover.setElevation(dp(8)); cover.setClipToOutline(true);
+        surface.setBackground(base); surface.setElevation(dp(11)); surface.setClipToOutline(true);
+        FrameLayout.LayoutParams surfaceLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT); surfaceLp.rightMargin = dp(9); surfaceLp.bottomMargin = dp(11); cover.addView(surface, surfaceLp);
         String coverUri = book == null ? "" : book.optString("cover_uri", "");
         if (!coverUri.isEmpty()) {
-            try { ImageView image = new ImageView(this); image.setImageURI(Uri.parse(coverUri)); image.setScaleType(ImageView.ScaleType.CENTER_CROP); image.setAlpha(.72f); cover.addView(image, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)); } catch (Exception ignored) { }
+            try { ImageView image = new ImageView(this); image.setImageURI(Uri.parse(coverUri)); image.setScaleType(ImageView.ScaleType.CENTER_CROP); image.setAlpha(.82f); surface.addView(image, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)); } catch (Exception ignored) { }
         }
-        View spine = new View(this); spine.setBackgroundColor(Color.parseColor("#C98FA4")); spine.setAlpha(.28f);
-        FrameLayout.LayoutParams spineLp = new FrameLayout.LayoutParams(dp(14), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START); spineLp.leftMargin = dp(13); cover.addView(spine, spineLp);
-        LinearLayout copy = new LinearLayout(this); copy.setOrientation(LinearLayout.VERTICAL); copy.setGravity(Gravity.CENTER); copy.setPadding(dp(34), dp(40), dp(24), dp(38));
-        TextView tiny = label("PRIVATE NOTEBOOK", 8); tiny.setTextColor(Color.parseColor("#986478")); tiny.setLetterSpacing(.14f); tiny.setGravity(Gravity.CENTER); copy.addView(tiny);
-        TextView name = title(book == null ? "TA 的日记" : book.optString("name", "TA 的日记"), 21); name.setTextColor(Color.parseColor("#684451")); name.setGravity(Gravity.CENTER); name.setLineSpacing(dp(4), 1f); copy.addView(name, matchWrapTop(26));
-        View rule = new View(this); rule.setBackgroundColor(Color.parseColor("#C18A9E")); LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(dp(84), dp(1)); ruleLp.topMargin = dp(18); ruleLp.gravity = Gravity.CENTER; copy.addView(rule, ruleLp);
-        TextView subtitle = body(book == null ? "把今天轻轻藏起来" : book.optString("subtitle", "把今天轻轻藏起来"), 10); subtitle.setTextColor(Color.parseColor("#835E6B")); subtitle.setGravity(Gravity.CENTER); copy.addView(subtitle, matchWrapTop(14));
-        TextView open = body("轻触翻开", 8); open.setGravity(Gravity.CENTER); open.setTextColor(Color.parseColor("#9C7482")); copy.addView(open, matchWrapTop(42));
-        cover.addView(copy, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        View tint = new View(this); tint.setBackgroundColor(Color.parseColor("#16FFF8F4")); surface.addView(tint, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        View spine = new View(this); spine.setBackgroundColor(Color.parseColor("#B97991")); spine.setAlpha(.3f);
+        FrameLayout.LayoutParams spineLp = new FrameLayout.LayoutParams(dp(29), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START); spineLp.leftMargin = dp(8); surface.addView(spine, spineLp);
+        for (int offset : new int[]{10, 35}) {
+            View groove = new View(this); groove.setBackgroundColor(Color.parseColor("#8F5C70")); groove.setAlpha(.2f);
+            FrameLayout.LayoutParams grooveLp = new FrameLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START); grooveLp.leftMargin = dp(offset); grooveLp.topMargin = dp(14); grooveLp.bottomMargin = dp(14); surface.addView(groove, grooveLp);
+        }
+
+        LinearLayout plate = new LinearLayout(this); plate.setOrientation(LinearLayout.VERTICAL); plate.setGravity(Gravity.CENTER); plate.setPadding(dp(16), dp(15), dp(16), dp(15)); plate.setElevation(dp(2));
+        GradientDrawable plateBg = new GradientDrawable(); plateBg.setColor(Color.parseColor("#E8FFF9F5")); plateBg.setCornerRadius(dp(12)); plateBg.setStroke(dp(1), Color.parseColor("#BFD7AEBB")); plate.setBackground(plateBg);
+        TextView tiny = label("PRIVATE NOTEBOOK", 8); tiny.setTextColor(Color.parseColor("#986478")); tiny.setLetterSpacing(.14f); tiny.setGravity(Gravity.CENTER); plate.addView(tiny);
+        TextView name = title(book == null ? "TA 的日记" : book.optString("name", "TA 的日记"), 21); name.setTextColor(Color.parseColor("#684451")); name.setGravity(Gravity.CENTER); name.setLineSpacing(dp(4), 1f); plate.addView(name, matchWrapTop(15));
+        View rule = new View(this); rule.setBackgroundColor(Color.parseColor("#C18A9E")); LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(dp(84), dp(1)); ruleLp.topMargin = dp(18); ruleLp.gravity = Gravity.CENTER; plate.addView(rule, ruleLp);
+        TextView subtitle = body(book == null ? "把今天轻轻藏起来" : book.optString("subtitle", "把今天轻轻藏起来"), 10); subtitle.setTextColor(Color.parseColor("#835E6B")); subtitle.setGravity(Gravity.CENTER); plate.addView(subtitle, matchWrapTop(11));
+        int entryCount = DiaryState.listEntries(this, book == null ? "" : book.optString("id", "")).length();
+        String year = new SimpleDateFormat("yyyy", Locale.US).format(new Date());
+        TextView volume = label(year + "  ·  VOL.01  ·  " + entryCount + " 篇", 7); volume.setTextColor(Color.parseColor("#A07886")); volume.setGravity(Gravity.CENTER); plate.addView(volume, matchWrapTop(12));
+        FrameLayout.LayoutParams plateLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER); plateLp.leftMargin = dp(53); plateLp.rightMargin = dp(25); surface.addView(plate, plateLp);
+
+        TextView open = body("轻触翻开", 8); open.setGravity(Gravity.CENTER); open.setTextColor(Color.parseColor("#8E6675"));
+        FrameLayout.LayoutParams openLp = new FrameLayout.LayoutParams(dp(104), dp(30), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL); openLp.bottomMargin = dp(35); surface.addView(open, openLp);
         return cover;
     }
 
@@ -1624,6 +1660,8 @@ public class MainActivity extends Activity {
     }
     private void updateHeader(String tab) {
         if (headerTitle == null || headerSubtitle == null) return;
+        boolean secondaryPage = ("see".equals(tab) && diaryPageOpen) || ("gate".equals(tab) && guardianCalendarDetailOpen);
+        if (topHeader != null) topHeader.setVisibility(secondaryPage ? View.GONE : View.VISIBLE);
         String date = new SimpleDateFormat("M月d日 · EEEE", Locale.CHINA).format(new Date());
         if ("life".equals(tab)) { headerTitle.setText(greeting() + "，" + AppPrefs.userName(this)); headerSubtitle.setText(date); }
         else if ("see".equals(tab)) {
