@@ -14,6 +14,8 @@ import android.graphics.Color;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.LinearGradient;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.Drawable;
@@ -634,7 +636,9 @@ public class MainActivity extends Activity {
             int coverWidth = Math.min(dp(292), getResources().getDisplayMetrics().widthPixels - dp(46));
             int coverHeight = Math.round(coverWidth * 1.44f);
             LinearLayout coverWrap = new LinearLayout(this); coverWrap.setGravity(Gravity.CENTER); coverWrap.setClipChildren(false); coverWrap.addView(cover, new LinearLayout.LayoutParams(coverWidth, coverHeight));
-            root.addView(coverWrap, marginBottom(17));
+            int visualCenterSpace = (getResources().getDisplayMetrics().heightPixels - coverHeight - dp(265)) / 2;
+            int coverTopMargin = Math.max(dp(16), Math.min(dp(88), visualCenterSpace));
+            LinearLayout.LayoutParams coverWrapLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); coverWrapLp.topMargin = coverTopMargin; coverWrapLp.bottomMargin = dp(17); root.addView(coverWrap, coverWrapLp);
 
             LinearLayout coverActions = horizontal(); coverActions.setGravity(Gravity.CENTER);
             Button rename = actionButton("修改名字", false); rename.setOnClickListener(v -> showRenameDiaryBookDialog());
@@ -687,16 +691,16 @@ public class MainActivity extends Activity {
             FrameLayout.LayoutParams grooveLp = new FrameLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START); grooveLp.leftMargin = dp(offset); grooveLp.topMargin = dp(14); grooveLp.bottomMargin = dp(14); surface.addView(groove, grooveLp);
         }
 
-        LinearLayout plate = new LinearLayout(this); plate.setOrientation(LinearLayout.VERTICAL); plate.setGravity(Gravity.CENTER); plate.setPadding(dp(16), dp(15), dp(16), dp(15)); plate.setElevation(dp(2));
-        GradientDrawable plateBg = new GradientDrawable(); plateBg.setColor(Color.parseColor("#E8FFF9F5")); plateBg.setCornerRadius(dp(12)); plateBg.setStroke(dp(1), Color.parseColor("#BFD7AEBB")); plate.setBackground(plateBg);
+        LinearLayout plate = new LinearLayout(this); plate.setOrientation(LinearLayout.VERTICAL); plate.setGravity(Gravity.CENTER); plate.setPadding(dp(14), dp(12), dp(14), dp(12)); plate.setElevation(dp(1));
+        GradientDrawable plateBg = new GradientDrawable(); plateBg.setColor(Color.parseColor("#A8F4E8EF")); plateBg.setCornerRadius(dp(15)); plateBg.setStroke(dp(1), Color.parseColor("#78D2B5C3")); plate.setBackground(plateBg);
         TextView tiny = label("PRIVATE NOTEBOOK", 8); tiny.setTextColor(Color.parseColor("#986478")); tiny.setLetterSpacing(.14f); tiny.setGravity(Gravity.CENTER); plate.addView(tiny);
-        TextView name = title(book == null ? "TA 的日记" : book.optString("name", "TA 的日记"), 21); name.setTextColor(Color.parseColor("#684451")); name.setGravity(Gravity.CENTER); name.setLineSpacing(dp(4), 1f); plate.addView(name, matchWrapTop(15));
-        View rule = new View(this); rule.setBackgroundColor(Color.parseColor("#C18A9E")); LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(dp(84), dp(1)); ruleLp.topMargin = dp(18); ruleLp.gravity = Gravity.CENTER; plate.addView(rule, ruleLp);
-        TextView subtitle = body(book == null ? "把今天轻轻藏起来" : book.optString("subtitle", "把今天轻轻藏起来"), 10); subtitle.setTextColor(Color.parseColor("#835E6B")); subtitle.setGravity(Gravity.CENTER); plate.addView(subtitle, matchWrapTop(11));
+        TextView name = title(book == null ? "TA 的日记" : book.optString("name", "TA 的日记"), 20); name.setTextColor(Color.parseColor("#684451")); name.setGravity(Gravity.CENTER); name.setLineSpacing(dp(4), 1f); plate.addView(name, matchWrapTop(12));
+        View rule = new View(this); rule.setBackgroundColor(Color.parseColor("#C18A9E")); LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(dp(76), dp(1)); ruleLp.topMargin = dp(12); ruleLp.gravity = Gravity.CENTER; plate.addView(rule, ruleLp);
+        TextView subtitle = body(book == null ? "把今天轻轻藏起来" : book.optString("subtitle", "把今天轻轻藏起来"), 9); subtitle.setTextColor(Color.parseColor("#835E6B")); subtitle.setGravity(Gravity.CENTER); plate.addView(subtitle, matchWrapTop(9));
         int entryCount = DiaryState.listEntries(this, book == null ? "" : book.optString("id", "")).length();
         String year = new SimpleDateFormat("yyyy", Locale.US).format(new Date());
-        TextView volume = label(year + "  ·  VOL.01  ·  " + entryCount + " 篇", 7); volume.setTextColor(Color.parseColor("#A07886")); volume.setGravity(Gravity.CENTER); plate.addView(volume, matchWrapTop(12));
-        FrameLayout.LayoutParams plateLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER); plateLp.leftMargin = dp(53); plateLp.rightMargin = dp(25); surface.addView(plate, plateLp);
+        TextView volume = label(year + "  ·  VOL.01  ·  " + entryCount + " 篇", 7); volume.setTextColor(Color.parseColor("#A07886")); volume.setGravity(Gravity.CENTER); plate.addView(volume, matchWrapTop(10));
+        FrameLayout.LayoutParams plateLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER); plateLp.leftMargin = dp(52); plateLp.rightMargin = dp(52); surface.addView(plate, plateLp);
 
         TextView open = body("轻触翻开", 8); open.setGravity(Gravity.CENTER); open.setTextColor(Color.parseColor("#8E6675"));
         FrameLayout.LayoutParams openLp = new FrameLayout.LayoutParams(dp(104), dp(30), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL); openLp.bottomMargin = dp(35); surface.addView(open, openLp);
@@ -849,11 +853,12 @@ public class MainActivity extends Activity {
         LinearLayout paper = new LinearLayout(this); paper.setTag("diary_paper"); paper.setOrientation(LinearLayout.VERTICAL); paper.setPadding(dp(20), dp(18), dp(20), dp(20)); paper.setBackground(new DiaryPaperDrawable()); paper.setElevation(dp(2));
         String entryId = entry.optString("id", "");
         boolean current = entryId.equals(diaryCurrentEntryId);
-        LinearLayout meta = horizontal(); TextView time = label(entry.optString("time_label", entry.optString("created_at", "").length() >= 16 ? entry.optString("created_at").substring(11, 16) : ""), 8); meta.addView(time, weightedWrap(1f, 0)); TextView mood = label(entry.optString("mood", ""), 8); meta.addView(mood); paper.addView(meta);
-        TextView heading = title(entry.optString("title", "没有标题的一页"), 16); heading.setTypeface(Typeface.create("serif", Typeface.BOLD)); heading.setTextColor(Color.parseColor("#5A4942")); paper.addView(heading, matchWrapTop(10));
-        TextView content = body(entry.optString("content", ""), 11); content.setTypeface(Typeface.create("serif", Typeface.NORMAL)); content.setTextColor(Color.parseColor("#66564E")); content.setLineSpacing(dp(8), 1f); setDiaryEntryExpanded(content, current); paper.addView(content, matchWrapTop(10));
-        String tags = diaryTagsText(entry.optJSONArray("tags")); if (!tags.isEmpty()) { TextView tagView = body(tags, 8); tagView.setTextColor(Color.parseColor("#A1767F")); paper.addView(tagView, matchWrapTop(14)); }
-        TextView expandHint = label(current ? "收起全文  ↑" : "点击展开全文  ↓", 8); expandHint.setTextColor(Color.parseColor("#A1767F")); paper.addView(expandHint, matchWrapTop(11));
+        LinearLayout meta = horizontal(); TextView time = label(entry.optString("time_label", entry.optString("created_at", "").length() >= 16 ? entry.optString("created_at").substring(11, 16) : ""), 8); time.setTextColor(Color.parseColor("#967584")); meta.addView(time, weightedWrap(1f, 0));
+        String moodText = entry.optString("mood", "").trim(); TextView mood = label(moodText, 8); if (moodText.isEmpty()) mood.setVisibility(View.GONE); else { mood.setTextColor(Color.parseColor("#9B6E80")); mood.setPadding(dp(8), dp(2), dp(8), dp(2)); GradientDrawable moodBg = new GradientDrawable(); moodBg.setColor(Color.parseColor("#F7E7ED")); moodBg.setCornerRadius(dp(12)); moodBg.setStroke(dp(1), Color.parseColor("#E8CBD6")); mood.setBackground(moodBg); } meta.addView(mood); paper.addView(meta);
+        TextView heading = title(entry.optString("title", "没有标题的一页"), 16); heading.setTypeface(Typeface.create("serif", Typeface.BOLD)); heading.setTextColor(Color.parseColor("#513E48")); paper.addView(heading, matchWrapTop(10));
+        TextView content = body(entry.optString("content", ""), 11); content.setTypeface(Typeface.create("serif", Typeface.NORMAL)); content.setTextColor(Color.parseColor("#66535C")); content.setLineSpacing(dp(8), 1f); setDiaryEntryExpanded(content, current); paper.addView(content, matchWrapTop(10));
+        String tags = diaryTagsText(entry.optJSONArray("tags")); if (!tags.isEmpty()) { TextView tagView = body(tags, 8); tagView.setTextColor(Color.parseColor("#A47788")); paper.addView(tagView, matchWrapTop(14)); }
+        TextView expandHint = label(current ? "收起全文  ↑" : "点击展开全文  ↓", 8); expandHint.setTextColor(Color.parseColor("#A47788")); paper.addView(expandHint, matchWrapTop(11));
         if (current) { diaryExpandedPaperView = paper; diaryExpandedContentView = content; diaryExpandedHintView = expandHint; }
         paper.setContentDescription(current ? "点击收起这篇日记" : "点击展开这篇日记");
         paper.setOnClickListener(v -> toggleDiaryEntryPaper(paper, content, expandHint, entryId)); paper.setClickable(true); paper.setFocusable(true);
@@ -1303,13 +1308,27 @@ public class MainActivity extends Activity {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         @Override public void draw(Canvas canvas) {
             RectF bounds = new RectF(getBounds());
-            paint.setColor(Color.parseColor("#FFF9EC"));
-            canvas.drawRoundRect(bounds, dp(16), dp(16), paint);
-            paint.setStrokeWidth(dp(.65f)); paint.setColor(Color.parseColor("#E8DDC8")); paint.setAlpha(105);
-            for (float y = bounds.top + dp(47); y < bounds.bottom - dp(13); y += dp(26)) canvas.drawLine(bounds.left + dp(13), y, bounds.right - dp(13), y, paint);
-            paint.setAlpha(32); paint.setColor(Color.parseColor("#A98F77"));
-            for (int i = 0; i < 18; i++) { float x = bounds.left + ((i * 47) % Math.max(1, (int)bounds.width())); float y = bounds.top + ((i * 71) % Math.max(1, (int)bounds.height())); canvas.drawCircle(x, y, dp(.55f), paint); }
-            paint.setAlpha(255);
+            paint.setShader(null); paint.setAlpha(255); paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.parseColor("#F0E3E8")); canvas.drawRoundRect(bounds, dp(17), dp(17), paint);
+
+            RectF page = new RectF(bounds.left, bounds.top, bounds.right - dp(3), bounds.bottom - dp(3));
+            paint.setShader(new LinearGradient(page.left, page.top, page.right, page.bottom,
+                    new int[]{Color.parseColor("#FFFDFB"), Color.parseColor("#FFF8F7"), Color.parseColor("#FAF7FF")},
+                    null, Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(page, dp(16), dp(16), paint); paint.setShader(null);
+
+            paint.setStrokeWidth(dp(.6f)); paint.setColor(Color.parseColor("#E8DCE2")); paint.setAlpha(108);
+            for (float y = page.top + dp(47); y < page.bottom - dp(13); y += dp(26)) canvas.drawLine(page.left + dp(24), y, page.right - dp(13), y, paint);
+            paint.setStrokeWidth(dp(.8f)); paint.setColor(Color.parseColor("#E9C6D2")); paint.setAlpha(88);
+            canvas.drawLine(page.left + dp(17), page.top + dp(14), page.left + dp(17), page.bottom - dp(14), paint);
+
+            paint.setStrokeWidth(dp(.45f)); paint.setColor(Color.parseColor("#D8BDC8")); paint.setAlpha(20);
+            int usableWidth = Math.max(1, (int)page.width() - dp(40)); int usableHeight = Math.max(1, (int)page.height() - dp(30));
+            for (int i = 0; i < 14; i++) {
+                float x = page.left + dp(23) + ((i * 53) % usableWidth); float y = page.top + dp(15) + ((i * 79) % usableHeight);
+                canvas.drawLine(x, y, x + dp(2 + i % 3), y + (i % 2 == 0 ? 0 : dp(.35f)), paint);
+            }
+            paint.setAlpha(255); paint.setShader(null);
         }
         @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); invalidateSelf(); }
         @Override public void setColorFilter(android.graphics.ColorFilter colorFilter) { paint.setColorFilter(colorFilter); invalidateSelf(); }
