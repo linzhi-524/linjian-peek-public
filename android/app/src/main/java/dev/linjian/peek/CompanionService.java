@@ -82,13 +82,19 @@ public class CompanionService extends Service {
         long delay = AppPrefs.interval(this);
         try {
             uploadStateThrottled(serverUrl, token, this, false);
+        } catch (Exception e) {
+            DebugState.append(this, "状态上传失败：" + ScreenshotService.shortMsg(e));
+        }
+        try {
             if (rateLimitedUntilMs > now) {
                 delay = Math.max(delay, rateLimitedUntilMs - now);
             } else {
                 String body = pollServer();
                 if (body != null && body.length() > 0) handleCommandBody(this, body, serverUrl, token);
             }
-        } catch (Exception e) { DebugState.append(this, "轮询异常：" + ScreenshotService.shortMsg(e)); }
+        } catch (Exception e) {
+            DebugState.append(this, "轮询异常：" + ScreenshotService.shortMsg(e));
+        }
         if (running) pollHandler.postDelayed(this::pollLoop, Math.max(AppPrefs.MIN_POLL_INTERVAL_MS, delay));
     }
 
@@ -96,7 +102,9 @@ public class CompanionService extends Service {
         HttpURLConnection conn = (HttpURLConnection) new URL(serverUrl + "/api/poll?device_id=" + java.net.URLEncoder.encode(AppPrefs.device(this), "UTF-8")).openConnection();
         conn.setConnectTimeout(10000); conn.setReadTimeout(15000); conn.setRequestMethod("GET"); conn.setRequestProperty("X-Auth-Token", token);
         try {
+            DebugState.append(this, "轮询请求开始");
             int code = conn.getResponseCode(); String body = ScreenshotService.readBody(conn, code);
+            DebugState.append(this, "轮询 HTTP 状态码：" + code);
             if (code == 200) {
                 if (body.contains("\"command\": null") || body.contains("\"command\":null")) return "";
                 DebugState.append(this, "轮询成功：收到命令包"); return body;
@@ -511,7 +519,7 @@ public class CompanionService extends Service {
         // 归电自动补弹：随生活状态上传定期检查；已限频，避免公开后端被状态上报打到 429。
         GuidianState.evaluate(ctx, state);
         state = LifeState.collect(ctx);
-        postJson(serverUrl + "/api/device/state", token, state);
+        postJson(ctx, serverUrl + "/api/device/state", token, state);
         ActiveReminder.evaluate(ctx, state);
         HomeMode.evaluate(ctx, state);
     }
@@ -519,15 +527,40 @@ public class CompanionService extends Service {
     private static void reportCommand(Context ctx, String serverUrl, String token, String id, boolean ok, String result) throws Exception {
         if (id == null || id.length() == 0) return;
         JSONObject report = new JSONObject(); report.put("device_id", AppPrefs.device(ctx)); report.put("command_id", id); report.put("ok", ok); report.put("result", result);
-        postJson(serverUrl + "/api/device/report", token, report);
+        postJson(ctx, serverUrl + "/api/device/report", token, report);
     }
 
-    private static String postJson(String urlStr, String token, JSONObject obj) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection)new URL(urlStr).openConnection(); conn.setRequestMethod("POST"); conn.setRequestProperty("Content-Type", "application/json; charset=utf-8"); conn.setRequestProperty("X-Auth-Token", token); conn.setDoOutput(true);
-        byte[] data = obj.toString().getBytes(StandardCharsets.UTF_8); try (OutputStream os = conn.getOutputStream()) { os.write(data); }
-        InputStream is = conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(); if (is != null) { byte[] buf = new byte[1024]; int n; while ((n = is.read(buf)) > 0) bos.write(buf,0,n); }
-        return new String(bos.toByteArray(), "UTF-8");
+    private static String postJson(Context ctx, String urlStr, String token, JSONObject obj) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(15000);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+        conn.setRequestProperty("X-Auth-Token", token);
+        conn.setDoOutput(true);
+        try {
+            byte[] data = obj.toString().getBytes(StandardCharsets.UTF_8);
+            try (OutputStream os = conn.getOutputStream()) { os.write(data); }
+            int code = conn.getResponseCode();
+            DebugState.append(ctx, "POST HTTP 状态码：" + code + " " + urlStr);
+            InputStream stream = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            if (stream != null) {
+                try (InputStream is = stream) {
+                    byte[] buf = new byte[1024];
+                    int n;
+                    while ((n = is.read(buf)) > 0) bos.write(buf, 0, n);
+                }
+            }
+            String body = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+            if (code < 200 || code >= 300) throw new java.io.IOException("HTTP " + code + " " + ScreenshotService.clip(body));
+            return body;
+        } catch (Exception e) {
+            DebugState.append(ctx, "POST 请求异常：" + ScreenshotService.shortMsg(e));
+            throw e;
+        } finally {
+            conn.disconnect();
+        }
     }
 
     private void createNotificationChannel() { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) { NotificationManager nm = getSystemService(NotificationManager.class); NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "掌心窗", NotificationManager.IMPORTANCE_LOW); channel.setDescription("掌心窗正在等待你授权的截图与手机动作请求"); nm.createNotificationChannel(channel); NotificationChannel reminder = new NotificationChannel(REMINDER_CHANNEL_ID, "掌心窗悬浮横幅提醒", NotificationManager.IMPORTANCE_HIGH); reminder.setDescription("来自掌心窗的悬浮横幅、生活提醒与回家模式"); reminder.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC); reminder.enableVibration(true); nm.createNotificationChannel(reminder); } }
