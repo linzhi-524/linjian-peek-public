@@ -79,7 +79,7 @@ public class ActiveReminder {
             if (p.getBoolean(AppPrefs.KEY_RULE_REST, true) && state.optBoolean("screen_on", false)) {
                 int interval = clamp(p.getInt(AppPrefs.KEY_REST_INTERVAL_MIN, 90), 30, 720);
                 if (cooldownDue(p, "rest", now, interval * MIN, true)) {
-                    notify(ctx, "掌心窗休息提醒", "小猫，眼睛离开屏幕半分钟，动一下肩颈，再回来玩。", "rest");
+                    notify(ctx, "掌心窗休息提醒", AppPrefs.userName(ctx) + "，眼睛离开屏幕半分钟，动一下肩颈，再回来玩。", "rest");
                 }
             }
 

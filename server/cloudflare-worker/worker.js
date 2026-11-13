@@ -1,4 +1,4 @@
-const VERSION = "0.3.9.0-public-diary-annotations";
+const VERSION = "0.3.9.0-public-wallet-edit-notify-fix";
 // MCP Apps clients cache UI resources by URI. Change the URI whenever the HTML changes.
 const STICKER_WIDGET_URI = "ui://linjian/sticker-card-v0433.html";
 const STICKER_WIDGET_ORIGIN = "https://linjian-peek-cloudflare.linzhi524.workers.dev";
@@ -21,7 +21,7 @@ const ALLOWED_ACTIONS = new Set([
   "deny_screen_break_release_request", "deny_break_release_request", "get_screen_break_state", "set_screen_break_passphrase",
   "add_screen_break_app", "remove_screen_break_app", "list_screen_break_apps", "get_focus_status", "start_focus_mode", "end_focus_mode", "set_focus_plan", "request_focus_unlock", "reply_focus_request", "approve_focus_unlock", "deny_focus_unlock", "temporary_focus_unlock", "get_guidian_state", "set_guidian_config",
   "trigger_guidian", "mark_guidian_returned", "get_calendar_state", "upsert_calendar_event", "add_calendar_event", "delete_calendar_event",
-  "get_wallet_state", "get_wallet_month_state", "list_wallet_months", "add_wallet_record", "list_wallet_pending", "list_wallet_approvals", "submit_wallet_approval", "confirm_wallet_record", "decide_wallet_approval", "save_wallet_request_result", "update_wallet_request_result", "get_wallet_rules", "set_wallet_rules", "wallet_approval_request", "get_takeout_state", "list_takeout_cards", "list_takeout_meals", "remember_takeout_meal", "remember_current_takeout_meal", "set_takeout_budget", "set_takeout_preferences", "add_takeout_card", "save_takeout_card", "update_takeout_card", "remove_takeout_card", "delete_takeout_card", "suggest_takeout_options", "create_takeout_plan", "takeout_wallet_request", "open_takeout_link", "copy_takeout_note", "record_takeout_order", "prepare_takeout_checkout", "auto_takeout_checkout", "get_takeout_checkout_status", "cancel_takeout_checkout", "create_diary_book", "list_diary_books", "rename_diary_book", "update_diary_book_cover", "write_diary_entry", "list_diary_entries", "read_diary_entry", "read_diary_entry_with_annotations", "add_diary_annotation", "list_diary_annotations", "mark_diary_annotations_seen", "delete_diary_annotation", "search_diary_entries", "update_diary_entry", "delete_diary_entry", "delete_diary_book"
+  "get_wallet_state", "get_wallet_month_state", "list_wallet_months", "add_wallet_record", "edit_wallet_record", "delete_wallet_record", "list_wallet_pending", "list_wallet_approvals", "submit_wallet_approval", "submit_companion_wallet_request", "list_companion_wallet_requests", "list_wallet_request_results", "confirm_wallet_record", "decide_wallet_approval", "save_wallet_request_result", "update_wallet_request_result", "save_user_wallet_request_result", "get_wallet_rules", "set_wallet_rules", "wallet_approval_request", "get_takeout_state", "list_takeout_cards", "list_takeout_meals", "remember_takeout_meal", "remember_current_takeout_meal", "set_takeout_budget", "set_takeout_preferences", "add_takeout_card", "save_takeout_card", "update_takeout_card", "remove_takeout_card", "delete_takeout_card", "suggest_takeout_options", "create_takeout_plan", "takeout_wallet_request", "open_takeout_link", "copy_takeout_note", "record_takeout_order", "prepare_takeout_checkout", "auto_takeout_checkout", "get_takeout_checkout_status", "cancel_takeout_checkout", "create_diary_book", "list_diary_books", "rename_diary_book", "update_diary_book_cover", "write_diary_entry", "list_diary_entries", "read_diary_entry", "read_diary_entry_with_annotations", "add_diary_annotation", "list_diary_annotations", "mark_diary_annotations_seen", "delete_diary_annotation", "search_diary_entries", "update_diary_entry", "delete_diary_entry", "delete_diary_book"
 ]);
 
 export default {
@@ -352,13 +352,19 @@ const MCP_TOOLS = [
   { name: "get_wallet_month_state", description: "读取小金库指定月份的预算、支出、分类和账单明细。", inputSchema: obj({ month: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
   { name: "list_wallet_months", description: "读取小金库历史月份摘要。", inputSchema: obj({ device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
   { name: "add_wallet_record", description: "给小金库添加一笔账单；可设为待确认。", inputSchema: obj({ amount: num(undefined), type: str("expense"), category: str("其他"), merchant: str(""), note: str(""), require_confirm: bool(false), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["amount"]) },
+  { name: "edit_wallet_record", description: "重新编辑一条已经记入小金库的账单，可修改金额、分类、商家和备注。", inputSchema: obj({ id: str(""), amount: num(undefined), category: str(""), merchant: str(""), note: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
+  { name: "delete_wallet_record", description: "删除一条已经记入小金库的账单。", inputSchema: obj({ id: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
   { name: "list_wallet_pending", description: "读取小金库待审批/待确认列表。", inputSchema: obj({ device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
   { name: "list_wallet_approvals", description: "读取小金库花钱审批申请和审批结果。", inputSchema: obj({ month: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
-  { name: "submit_wallet_approval", description: "提交一条花钱申请，等待机审批。", inputSchema: obj({ amount: num(undefined), item: str(""), category: str("其他"), merchant: str(""), reason: str(""), necessity: int(3), impulse: int(3), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["amount"]) },
+  { name: "submit_wallet_approval", description: "提交一条花钱申请，等待机审批。", inputSchema: obj({ amount: num(undefined), item: str(""), category: str("其他"), merchant: str(""), reason: str(""), necessity: int(3), impulse: int(3), requester_role: str("companion"), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["amount"]) },
+  { name: "submit_companion_wallet_request", description: "陪伴者主动向用户提交一条小金库申请，等待用户在 App 或聊天中处理。", inputSchema: obj({ amount: num(undefined), item: str(""), title: str(""), purpose: str(""), category: str("其他"), merchant: str(""), reason: str(""), necessity: int(3), impulse: int(3), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["amount"]) },
+  { name: "list_companion_wallet_requests", description: "读取陪伴者提交给用户的小金库申请，以及用户处理后的结果。", inputSchema: obj({ month: str(""), status: str("all"), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
+  { name: "list_wallet_request_results", description: "读取小金库申请及处理结果，可按发起方和状态筛选。", inputSchema: obj({ month: str(""), requester_role: str("all"), status: str("all"), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
   { name: "confirm_wallet_record", description: "确认、忽略或修改一条小金库待确认账单。", inputSchema: obj({ id: str(""), decision: str("confirm"), amount: num(undefined), category: str(""), note: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
   { name: "decide_wallet_approval", description: "兼容旧版：处理一条小金库申请并写入回复。新配置优先使用 save_wallet_request_result。", inputSchema: obj({ id: str(""), decision: str("approved"), message: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
-  { name: "save_wallet_request_result", description: "保存一条小金库申请的处理结果和备注。用 ok/hold/no 表示通过、暂缓、驳回，减少平台误拦。", inputSchema: obj({ id: str(""), status: str("ok"), note: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
+  { name: "save_wallet_request_result", description: "保存一条小金库申请的处理结果和备注。用 ok/hold/no 表示通过、暂缓、驳回。", inputSchema: obj({ id: str(""), status: str("ok"), note: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
   { name: "update_wallet_request_result", description: "更新一条小金库申请的处理结果；save_wallet_request_result 的别名。", inputSchema: obj({ id: str(""), status: str("ok"), note: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
+  { name: "save_user_wallet_request_result", description: "在用户明确同意后，保存用户对陪伴者申请的处理结果。", inputSchema: obj({ id: str(""), status: str("ok"), note: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["id"]) },
   { name: "get_wallet_rules", description: "读取小金库预算规则和自动识别模式。", inputSchema: obj({ device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
   { name: "set_wallet_rules", description: "设置小金库预算、审批线、自动识别模式和分类上限。", inputSchema: obj({ monthly_budget: num(undefined), approval_threshold: num(undefined), auto_mode: str(""), category_limits: str(""), deep_night_reminder: bool(true), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }) },
   { name: "wallet_approval_request", description: "用户想买东西时，让机即时花钱审批：通过、延迟或驳回，并记录审批意见。", inputSchema: obj({ amount: num(undefined), item: str(""), category: str("其他"), merchant: str(""), reason: str(""), necessity: int(3), impulse: int(3), decision: str(""), message: str(""), device_id: str(DEFAULT_DEVICE), wait_seconds: int(8) }, ["amount"]) },
@@ -804,7 +810,28 @@ async function callMcpTool(name, args = {}, env) {
       const payload = { action: "add_wallet_record", amount: Number(args.amount || 0), type: args.type || "expense", category: args.category || "其他", merchant: args.merchant || "", note: args.note || "", require_confirm: Boolean(args.require_confirm), source: "mcp" };
       return observed({ ...payload, payload }, args.wait_seconds ?? 8);
     }
+    case "edit_wallet_record": {
+      const payload = withoutKeys(args, ["device_id", "wait_seconds"]); payload.action = "edit_wallet_record";
+      return observed({ ...payload, payload }, args.wait_seconds ?? 8);
+    }
+    case "delete_wallet_record": {
+      const payload = { action: "delete_wallet_record", id: args.id || "" };
+      return observed({ ...payload, payload }, args.wait_seconds ?? 8);
+    }
     case "submit_wallet_approval": return mcpText(await submitWalletApprovalDirect(env, device_id, args || {}));
+    case "submit_companion_wallet_request": {
+      const item = args.item || args.title || args.purpose || args.reason || "这笔申请";
+      const payload = { ...withoutKeys(args, ["device_id", "wait_seconds"]), action: "submit_companion_wallet_request", item, requester_role: "companion", source: "mcp", created_by: "companion" };
+      return observed({ ...payload, payload }, args.wait_seconds ?? 8);
+    }
+    case "list_companion_wallet_requests": {
+      const payload = { action: "list_companion_wallet_requests", month: args.month || "", status: args.status || "all", requester_role: "companion" };
+      return observed({ ...payload, payload }, args.wait_seconds ?? 8);
+    }
+    case "list_wallet_request_results": {
+      const payload = { action: "list_wallet_request_results", month: args.month || "", requester_role: args.requester_role || "all", status: args.status || "all" };
+      return observed({ ...payload, payload }, args.wait_seconds ?? 8);
+    }
     case "confirm_wallet_record": {
       const payload = { action: "confirm_wallet_record", id: args.id || "", decision: args.decision || "confirm", amount: args.amount, category: args.category || "", note: args.note || "" };
       return observed({ ...payload, payload }, args.wait_seconds ?? 8);
@@ -812,6 +839,10 @@ async function callMcpTool(name, args = {}, env) {
     case "decide_wallet_approval": { const r = await decideWalletApprovalDirect(env, device_id, args || {}); return mcpText(r, r?.ok === false); }
     case "save_wallet_request_result":
     case "update_wallet_request_result": { const r = await saveWalletRequestResultDirect(env, device_id, args || {}); return mcpText(r, r?.ok === false); }
+    case "save_user_wallet_request_result": {
+      const payload = { action: "save_user_wallet_request_result", id: args.id || "", status: args.status || "ok", note: args.note || "" };
+      return observed({ ...payload, payload }, args.wait_seconds ?? 8);
+    }
     case "set_wallet_rules": {
       const payload = withoutKeys(args, ["device_id", "wait_seconds"]); payload.action = "set_wallet_rules";
       return observed({ ...payload, payload }, args.wait_seconds ?? 8);
@@ -1294,7 +1325,7 @@ async function queueCommand(env, data) {
   return json({ ok: true, command: cmd, queued: true });
 }
 function titleFor(action) {
-  const map = { start_focus_mode: "开启专注模式", end_focus_mode: "结束专注模式", set_focus_plan: "设置专注规则", reply_focus_request: "回复专注求助", approve_focus_unlock: "批准专注应急", deny_focus_unlock: "拒绝专注应急", get_focus_status: "查看专注模式", send_notification: "发送提醒", set_alarm: "设置闹钟", trigger_guidian: "发起归电", mark_guidian_returned: "标记归电返回", set_guidian_config: "调整归电设置", screen_off: "让手机息屏", phone_screen_off: "让手机息屏", open_app: "打开应用", tap_text: "按文字点击", input_text: "输入文字", get_screen_nodes: "读取屏幕节点", screen_break_app: "开启应用门禁", temporary_screen_break_release: "临时放行应用", end_screen_break: "解除应用门禁", extend_screen_break: "延长应用门禁", deny_screen_break_release_request: "拒绝恢复申请", get_screen_break_state: "查看应用门禁状态", list_screen_break_apps: "列出可门禁应用", add_screen_break_app: "添加门禁应用", set_screen_break_passphrase: "设置门禁口令", get_calendar_state: "查看守护日历", upsert_calendar_event: "更新守护日历", get_wallet_state: "查看小金库", add_wallet_record: "添加小金库账单", list_wallet_pending: "查看待审批", confirm_wallet_record: "处理小金库账单", get_wallet_rules: "查看小金库规则", set_wallet_rules: "设置小金库规则", wallet_approval_request: "小金库花钱处理", save_wallet_request_result: "保存小金库处理结果", update_wallet_request_result: "更新小金库处理结果", get_takeout_state: "查看外卖助手", list_takeout_cards: "查看常点套餐", set_takeout_budget: "设置外卖预算", add_takeout_card: "保存常点套餐", update_takeout_card: "更新常点套餐", suggest_takeout_options: "推荐外卖", create_takeout_plan: "生成外卖计划", takeout_wallet_request: "外卖小金库申请", open_takeout_link: "打开外卖链接", copy_takeout_note: "复制外卖备注", record_takeout_order: "记录外卖账单", prepare_takeout_checkout: "自动点到付款页", auto_takeout_checkout: "自动点到付款页", get_takeout_checkout_status: "查看自动点单状态", cancel_takeout_checkout: "停止自动点单", peek: "查看屏幕", run_sequence: "执行组合动作", save_known_app: "保存应用别名", home: "回到手机桌面", back: "返回上一页", recents: "打开最近任务" };
+  const map = { start_focus_mode: "开启专注模式", end_focus_mode: "结束专注模式", set_focus_plan: "设置专注规则", reply_focus_request: "回复专注求助", approve_focus_unlock: "批准专注应急", deny_focus_unlock: "拒绝专注应急", get_focus_status: "查看专注模式", send_notification: "发送提醒", set_alarm: "设置闹钟", trigger_guidian: "发起归电", mark_guidian_returned: "标记归电返回", set_guidian_config: "调整归电设置", screen_off: "让手机息屏", phone_screen_off: "让手机息屏", open_app: "打开应用", tap_text: "按文字点击", input_text: "输入文字", get_screen_nodes: "读取屏幕节点", screen_break_app: "开启应用门禁", temporary_screen_break_release: "临时放行应用", end_screen_break: "解除应用门禁", extend_screen_break: "延长应用门禁", deny_screen_break_release_request: "拒绝恢复申请", get_screen_break_state: "查看应用门禁状态", list_screen_break_apps: "列出可门禁应用", add_screen_break_app: "添加门禁应用", set_screen_break_passphrase: "设置门禁口令", get_calendar_state: "查看守护日历", upsert_calendar_event: "更新守护日历", get_wallet_state: "查看小金库", add_wallet_record: "添加小金库账单", edit_wallet_record: "重新编辑小金库账单", delete_wallet_record: "删除小金库账单", list_wallet_pending: "查看待审批", submit_companion_wallet_request: "陪伴者提交小金库申请", list_companion_wallet_requests: "查看陪伴者小金库申请", list_wallet_request_results: "查看小金库申请结果", save_user_wallet_request_result: "保存用户处理结果", confirm_wallet_record: "处理小金库账单", get_wallet_rules: "查看小金库规则", set_wallet_rules: "设置小金库规则", wallet_approval_request: "小金库花钱处理", save_wallet_request_result: "保存小金库处理结果", update_wallet_request_result: "更新小金库处理结果", get_takeout_state: "查看外卖助手", list_takeout_cards: "查看常点套餐", set_takeout_budget: "设置外卖预算", add_takeout_card: "保存常点套餐", update_takeout_card: "更新常点套餐", suggest_takeout_options: "推荐外卖", create_takeout_plan: "生成外卖计划", takeout_wallet_request: "外卖小金库申请", open_takeout_link: "打开外卖链接", copy_takeout_note: "复制外卖备注", record_takeout_order: "记录外卖账单", prepare_takeout_checkout: "自动点到付款页", auto_takeout_checkout: "自动点到付款页", get_takeout_checkout_status: "查看自动点单状态", cancel_takeout_checkout: "停止自动点单", peek: "查看屏幕", run_sequence: "执行组合动作", save_known_app: "保存应用别名", home: "回到手机桌面", back: "返回上一页", recents: "打开最近任务" };
   return map[action] || `执行 ${action}`;
 }
 async function pollCommand(env, url) {

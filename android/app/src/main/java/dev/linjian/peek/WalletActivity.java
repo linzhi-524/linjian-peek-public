@@ -318,6 +318,19 @@ public class WalletActivity extends Activity {
                 content.addView(row);
             }
         }
+
+        addSectionTitle("账单明细", "", null);
+        JSONArray monthRecords = WalletState.recordsForMonth(this, selectedMonth);
+        if (monthRecords == null || monthRecords.length() == 0) {
+            content.addView(emptyCard("这个月还没有已入账账单。", "¥"));
+        } else {
+            TextView tip = small("左滑或长按任一账单，可重新编辑或删除。共 " + monthRecords.length() + " 笔");
+            tip.setPadding(dp(2), 0, 0, dp(8));
+            content.addView(tip);
+            for (int i = 0; i < monthRecords.length(); i++) {
+                content.addView(recordCard(monthRecords.optJSONObject(i), false));
+            }
+        }
     }
 
 
@@ -557,8 +570,15 @@ public class WalletActivity extends Activity {
     }
 
     private void attachSwipeActions(LinearLayout box, JSONObject r) {
+        final float[] downX = new float[1];
+        final float[] downY = new float[1];
+        final boolean[] longPressed = new boolean[1];
         GestureDetector detector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent e) { return true; }
+            @Override public void onLongPress(MotionEvent e) {
+                longPressed[0] = true;
+                showRecordSwipeActions(box, r);
+            }
             @Override public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 if (e1 == null || e2 == null) return false;
                 float dx = e2.getX() - e1.getX();
@@ -570,7 +590,24 @@ public class WalletActivity extends Activity {
                 return false;
             }
         });
-        box.setOnTouchListener((v, ev) -> detector.onTouchEvent(ev));
+        box.setOnTouchListener((v, ev) -> {
+            if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                downX[0] = ev.getX();
+                downY[0] = ev.getY();
+                longPressed[0] = false;
+            }
+            boolean handled = detector.onTouchEvent(ev);
+            if (ev.getActionMasked() == MotionEvent.ACTION_UP && !longPressed[0]) {
+                float dx = ev.getX() - downX[0];
+                float dy = ev.getY() - downY[0];
+                // 不只依赖 fling：慢速左滑也能稳定展开操作。
+                if (dx < -dp(36) && Math.abs(dx) > Math.abs(dy) * 1.15f) {
+                    showRecordSwipeActions(box, r);
+                    handled = true;
+                }
+            }
+            return handled;
+        });
     }
 
     private void showRecordSwipeActions(LinearLayout box, JSONObject r) {
@@ -580,7 +617,7 @@ public class WalletActivity extends Activity {
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, dp(10), 0, 0);
         box.addView(actions);
-        actions.addView(actionButton("编辑", v -> editRecord(r)), weightLp(1,0,4));
+        actions.addView(actionButton("重新编辑", v -> editRecord(r)), weightLp(1,0,4));
         actions.addView(actionButton("删除", v -> confirmDeleteRecord(r)), weightLp(1,4,0));
     }
 
@@ -590,7 +627,7 @@ public class WalletActivity extends Activity {
         EditText category = input("分类", false); category.setText(r.optString("category", "其他")); form.addView(category);
         EditText merchant = input("商家", false); merchant.setText(r.optString("merchant", "")); form.addView(merchant);
         EditText note = input("备注", false); note.setText(r.optString("note", "")); form.addView(note);
-        new AlertDialog.Builder(this).setTitle("编辑账单").setView(form).setNegativeButton("取消", null).setPositiveButton("保存", (d,w)->{
+        new AlertDialog.Builder(this).setTitle("重新编辑账单").setView(form).setNegativeButton("取消", null).setPositiveButton("保存", (d,w)->{
             try {
                 WalletState.updateRecord(this, new JSONObject()
                         .put("id", r.optString("id"))
@@ -599,7 +636,7 @@ public class WalletActivity extends Activity {
                         .put("merchant", merchant.getText().toString())
                         .put("note", note.getText().toString()));
                 toast("已保存");
-                showHome();
+                refreshCurrentPage();
             } catch(Exception e) { toast("保存失败"); }
         }).show();
     }
@@ -610,7 +647,7 @@ public class WalletActivity extends Activity {
                 .setMessage(r.optString("note", r.optString("merchant", "这笔账单")) + " · ¥" + WalletState.money(r.optDouble("amount", 0)))
                 .setNegativeButton("取消", null)
                 .setPositiveButton("删除", (d,w)->{
-                    try { WalletState.deleteRecord(this, r.optString("id")); toast("已删除"); showHome(); }
+                    try { WalletState.deleteRecord(this, r.optString("id")); toast("已删除"); refreshCurrentPage(); }
                     catch(Exception e) { toast("删除失败"); }
                 }).show();
     }

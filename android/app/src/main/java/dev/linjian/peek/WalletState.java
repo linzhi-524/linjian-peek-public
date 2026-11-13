@@ -111,6 +111,27 @@ public class WalletState {
         return out;
     }
 
+    /** 返回指定月份全部已入账账单，供小金库本地明细页编辑/删除；不把审批和待确认项混入。 */
+    public static JSONArray recordsForMonth(Context ctx, String targetMonth) {
+        JSONArray out = new JSONArray();
+        try {
+            JSONArray all = records(ctx);
+            String month = (targetMonth == null || targetMonth.trim().length() == 0) ? currentMonth() : targetMonth.trim();
+            long now = System.currentTimeMillis();
+            for (int i = 0; i < all.length(); i++) {
+                JSONObject r = all.optJSONObject(i);
+                if (r == null) continue;
+                String status = r.optString("status", "confirmed");
+                String type = r.optString("type", "expense");
+                boolean isApproval = "approval_request".equals(type) || status.startsWith("approval_");
+                if ("pending".equals(status) || "ignored".equals(status) || isApproval) continue;
+                if (!month.equals(monthKey(r.optLong("created_at_ms", now)))) continue;
+                out.put(r);
+            }
+        } catch (Exception ignored) { }
+        return out;
+    }
+
     public static JSONArray monthSummaries(Context ctx) {
         JSONArray out = new JSONArray();
         try {
