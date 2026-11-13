@@ -1,4 +1,15 @@
-# 掌心窗公开版 v0.3.9.0
+# 掌心窗公开版 v0.3.9.1
+
+## v0.3.9.1 小金库账单管理、通知昵称与 Cloudflare MCP 同步
+
+- 小金库已添加账单支持**左滑或长按**唤出「重新编辑」和「删除」操作。
+- 优化账单滑动识别，并在统计页补充当月账单明细，较早记录也可以重新编辑或删除。
+- 修复用户修改设置页昵称后，「休息眼睛」提醒仍固定显示“小猫”的问题；现统一读取用户设置的昵称。
+- Cloudflare MCP 补齐小金库账单编辑/删除能力，并同步陪伴者小金库申请与结果回写相关工具。
+- Cloudflare Worker 同步支持 `edit_wallet_record`、`delete_wallet_record`、`submit_companion_wallet_request`、`list_companion_wallet_requests`、`save_user_wallet_request_result`、`wallet_takeout_action`。
+- 同步两份 Cloudflare Worker 源码与 `/health` 版本标识，避免不同部署入口能力不一致。
+- 版本号：`0.3.9.1` / `30901`，固定签名保持不变。
+- 部署提示：手机 App 需重新构建并安装新 APK；使用 Cloudflare MCP 的用户需重新部署 Worker。
 
 ## v0.3.9.0 MCP 兼容与日记批注读取修复
 
@@ -202,15 +213,15 @@ update.json   版本更新信息
 
 1. 将源码包解压并覆盖到公开仓库根目录，确保 `.github`、`android`、`server`、`mcp` 位于根目录。
 2. 打开 GitHub 仓库 → **Actions** → **Build Android Public APK** → **Run workflow**。
-3. 构建成功后下载 `zhangxinchuang-public-v0.3.8.6-apk` artifact。
+3. 构建成功后下载 `zhangxinchuang-public-v0.3.9.1-apk` artifact。
 
 构建产物为：
 
 ```text
-android/Zhangxinchuang-public-v0.3.8.6.apk
+android/Zhangxinchuang-public-v0.3.9.1.apk
 ```
 
-版本名 `0.3.8.6`，版本码 `30806`。
+版本名 `0.3.9.1`，版本码 `30901`。
 
 ### 固定签名
 
