@@ -44,7 +44,7 @@ public class TakeoutState {
             JSONObject wallet = WalletState.collect(ctx);
             JSONObject checkout = checkoutSession(ctx);
             out.put("ok", true);
-            out.put("takeout_version", "0.3.9.0-public-takeout");
+            out.put("takeout_version", "0.3.9.1-public-takeout");
             out.put("device_id", AppPrefs.device(ctx));
             out.put("meal_budget", WalletState.round2(mealBudget));
             out.put("day_budget", WalletState.round2(dayBudget));

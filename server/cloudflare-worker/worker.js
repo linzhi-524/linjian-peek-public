@@ -1,4 +1,4 @@
-const VERSION = "0.3.9.0-public-wallet-edit-notify-fix";
+const VERSION = "0.3.9.1-public-wallet-edit-notify-fix";
 // MCP Apps clients cache UI resources by URI. Change the URI whenever the HTML changes.
 const STICKER_WIDGET_URI = "ui://linjian/sticker-card-v0433.html";
 const STICKER_WIDGET_ORIGIN = "https://linjian-peek-cloudflare.linzhi524.workers.dev";

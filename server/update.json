@@ -1,28 +1,28 @@
 {
-  "latest_version_name": "0.3.9.0",
-  "latest_version_code": 30900,
-  "apk_url": "https://github.com/linzhi-524/linjian-peek-public/releases/download/v0.3.9.0/Zhangxinchuang-public-v0.3.9.0.apk",
+  "latest_version_name": "0.3.9.1",
+  "latest_version_code": 30901,
+  "apk_url": "https://github.com/linzhi-524/linjian-peek-public/releases/download/v0.3.9.1/Zhangxinchuang-public-v0.3.9.1.apk",
   "sha256": "",
   "required": false,
   "notes": [
-    "修复部分 AI 平台连接 MCP 时因 experimental.ovoActivityCards 触发 Invalid input 的兼容问题。",
-    "修复日记批注读取工具返回 noop：server 白名单补齐 read/list/add/mark/delete annotation 相关 action。",
-    "保留上一版媒体状态修复：MediaSession 主动读取媒体播放状态，通知监听作为兜底。",
-    "版本号升级到 v0.3.9.0 / 30900，固定签名保持不变。",
-    "部署提示：MCP 服务与 server 服务都需要重新部署；手机 App 如需显示新版本号需重新打包安装。"
+    "小金库账单支持左滑或长按唤出“重新编辑 / 删除”，并补充当月账单明细，较早记录也可管理。",
+    "修复“休息眼睛”通知昵称被硬编码为“小猫”的问题，现统一读取设置中的用户昵称。",
+    "Cloudflare MCP 同步账单编辑/删除及小金库陪伴者相关工具，补齐允许动作与执行分支。",
+    "版本号升级到 v0.3.9.1 / 30901；APK 输出文件名同步为 Zhangxinchuang-public-v0.3.9.1.apk。",
+    "Cloudflare 两份 worker.js 已同步；部署 Cloudflare 后可通过 /health 核对 0.3.9.1-public-wallet-edit-notify-fix。"
   ],
   "changelog": [
-    "修复部分 AI 平台连接 MCP 时因 experimental.ovoActivityCards 触发 Invalid input 的兼容问题。",
-    "修复日记批注读取工具返回 noop：server 白名单补齐 read/list/add/mark/delete annotation 相关 action。",
-    "保留上一版媒体状态修复：MediaSession 主动读取媒体播放状态，通知监听作为兜底。",
-    "版本号升级到 v0.3.9.0 / 30900，固定签名保持不变。",
-    "部署提示：MCP 服务与 server 服务都需要重新部署；手机 App 如需显示新版本号需重新打包安装。"
+    "小金库账单支持左滑或长按唤出“重新编辑 / 删除”，并补充当月账单明细，较早记录也可管理。",
+    "修复“休息眼睛”通知昵称被硬编码为“小猫”的问题，现统一读取设置中的用户昵称。",
+    "Cloudflare MCP 同步账单编辑/删除及小金库陪伴者相关工具，补齐允许动作与执行分支。",
+    "版本号升级到 v0.3.9.1 / 30901；APK 输出文件名同步为 Zhangxinchuang-public-v0.3.9.1.apk。",
+    "Cloudflare 两份 worker.js 已同步；部署 Cloudflare 后可通过 /health 核对 0.3.9.1-public-wallet-edit-notify-fix。"
   ],
   "release_notes": [
-    "修复部分 AI 平台连接 MCP 时因 experimental.ovoActivityCards 触发 Invalid input 的兼容问题。",
-    "修复日记批注读取工具返回 noop：server 白名单补齐 read/list/add/mark/delete annotation 相关 action。",
-    "保留上一版媒体状态修复：MediaSession 主动读取媒体播放状态，通知监听作为兜底。",
-    "版本号升级到 v0.3.9.0 / 30900，固定签名保持不变。",
-    "部署提示：MCP 服务与 server 服务都需要重新部署；手机 App 如需显示新版本号需重新打包安装。"
+    "小金库账单支持左滑或长按唤出“重新编辑 / 删除”，并补充当月账单明细，较早记录也可管理。",
+    "修复“休息眼睛”通知昵称被硬编码为“小猫”的问题，现统一读取设置中的用户昵称。",
+    "Cloudflare MCP 同步账单编辑/删除及小金库陪伴者相关工具，补齐允许动作与执行分支。",
+    "版本号升级到 v0.3.9.1 / 30901；APK 输出文件名同步为 Zhangxinchuang-public-v0.3.9.1.apk。",
+    "Cloudflare 两份 worker.js 已同步；部署 Cloudflare 后可通过 /health 核对 0.3.9.1-public-wallet-edit-notify-fix。"
   ]
 }

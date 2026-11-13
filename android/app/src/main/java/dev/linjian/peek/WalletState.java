@@ -84,7 +84,7 @@ public class WalletState {
             for (Map.Entry<String, Double> e : cat.entrySet()) cats.put(e.getKey(), round2(e.getValue()));
             out.put("ok", true);
             out.put("device_id", AppPrefs.device(ctx));
-            out.put("wallet_version", "0.3.9.0-public-wallet-auto-record");
+            out.put("wallet_version", "0.3.9.1-public-wallet-edit-delete");
             out.put("month", month);
             out.put("current_month", currentMonth);
             out.put("is_current_month", currentMonth.equals(month));

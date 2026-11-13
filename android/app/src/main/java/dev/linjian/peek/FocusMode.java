@@ -30,7 +30,7 @@ public class FocusMode {
     private static JSONObject defaultState() {
         JSONObject s = new JSONObject();
         try {
-            s.put("focus_version", "0.3.9.0-public-diary-annotations");
+            s.put("focus_version", "0.3.9.1-public-diary-annotations");
             s.put("enabled", false);
             s.put("active", false);
             s.put("mode", "strict");
@@ -63,7 +63,7 @@ public class FocusMode {
                 if (!s.has("scope")) s.put("scope", "full_phone");
                 if (!s.has("managed_by_ai")) s.put("managed_by_ai", true);
                 if (!s.has("message_source")) s.put("message_source", "default");
-                s.put("focus_version", "0.3.9.0-public-diary-annotations");
+                s.put("focus_version", "0.3.9.1-public-diary-annotations");
                 return s;
             }
         } catch (Exception ignored) { }
